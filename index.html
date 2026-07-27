@@ -391,6 +391,65 @@ body {
   margin-top: 8px;
 }
 
+/* ===== 文案分析器 ===== */
+.analyzer-box {
+  background: linear-gradient(135deg, #e8f8ee, #f0fff4);
+  border: 1px solid var(--green);
+  border-radius: var(--radius);
+  padding: 16px;
+  margin-bottom: 12px;
+}
+
+.analyzer-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--green);
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.analyzer-result {
+  margin-top: 12px;
+  display: none;
+}
+
+.analyzer-result.show {
+  display: block;
+}
+
+.analyzer-section {
+  background: white;
+  border-radius: 10px;
+  padding: 12px;
+  margin-bottom: 8px;
+}
+
+.analyzer-section-title {
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.analyzer-section-content {
+  font-size: 13px;
+  line-height: 1.6;
+  color: #333;
+}
+
+.analyzer-tag {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 500;
+  margin-left: 4px;
+}
+
 /* ===== 视频列表 ===== */
 .video-item {
   padding: 14px;
@@ -893,6 +952,13 @@ body {
 
 <!-- ===== 爆款文案页 ===== -->
 <div class="page" id="page-copy">
+  <div class="analyzer-box">
+    <div class="analyzer-title">🤖 文案智能分析器</div>
+    <p style="font-size:12px;color:#666;margin-bottom:10px;">粘贴爆款文案，自动拆解前三秒钩子、正文结构、逼单话术</p>
+    <textarea class="form-textarea" id="analyzerInput" placeholder="粘贴抖音视频文案内容..." style="min-height:100px;background:white;"></textarea>
+    <button class="btn btn-green btn-block" style="margin-top:10px;" onclick="analyzeCopy()">🔍 一键分析文案结构</button>
+    <div class="analyzer-result" id="analyzerResult"></div>
+  </div>
   <div class="search-bar">
     <input class="search-input" id="copySearch" placeholder="搜索文案/产品..." oninput="renderCopies()">
     <select class="filter-select" id="copyFilter" onchange="renderCopies()">
@@ -1268,6 +1334,123 @@ function deletePlan(id) {
 }
 
 // ===== 爆款文案 =====
+
+// 文案智能分析器
+function analyzeCopy() {
+  const text = document.getElementById('analyzerInput').value.trim();
+  if (!text) { toast('请先粘贴文案内容'); return; }
+
+  // 按标点分句
+  const sentences = text.split(/[。！？\n！？。]/).filter(s => s.trim().length > 2);
+  if (sentences.length === 0) { toast('文案内容太少'); return; }
+
+  // 前三秒钩子（取前1-2句）
+  const hook = sentences.slice(0, 2).join('！');
+
+  // 识别钩子类型
+  let hookType = '其他';
+  if (/问|怎么|为什么|如何|哪里|哪个|多少|是不是|有没有/.test(hook)) hookType = '痛点提问';
+  else if (/别|不要|千万别|停止|停产|错过|来不及/.test(hook)) hookType = '反常识/稀缺';
+  else if (/元|块|免费|便宜|划算|性价比|白菜价|骨折|秒杀|崩了|疯了/.test(hook)) hookType = '价格诱惑';
+  else if (/秒变|瞬间|立刻|马上|效果|对比|之前|之后|变化|逆袭|翻盘/.test(hook)) hookType = '效果展示';
+  else if (/第[一二三四五六七八九十]|Top|TOP|排名|榜单|前[0-9]|推荐|必备/.test(hook)) hookType = '榜单权威';
+  else if (/震惊|惊呆|离谱|离了大谱|万万|没想到|竟然|居然|天哪|我的天/.test(hook)) hookType = '情绪冲击';
+  else if (/姐妹|兄弟|宝子|家人|谁懂|听劝|答应我|求你们/.test(hook)) hookType = '称呼共鸣';
+
+  // 正文结构（中间部分）
+  const body = sentences.slice(2, -1).join('。') || sentences.slice(1).join('。');
+
+  // 识别正文结构类型
+  let bodyType = '其他';
+  if (/对比|VS|vs|比较|差异|区别/.test(body)) bodyType = '对比测评';
+  else if (/步骤|第一步|第二步|教程|方法|怎么用|怎么选/.test(body)) bodyType = '教程教学';
+  else if (/场景|家里|办公室|出门|旅行|日常|平时/.test(body)) bodyType = '场景演绎';
+  else if (/成分|材料|工艺|配方|技术|检测|认证/.test(body)) bodyType = '成分背书';
+  else if (/成分|材质|克重|厚度|尺寸|容量|规格/.test(body)) bodyType = '参数展示';
+
+  // 逼单话术（最后1-2句）
+  const cta = sentences.slice(-2).join('！');
+
+  // 识别逼单类型
+  let ctaType = '其他';
+  if (/限时|秒杀|抢|赶紧|马上|最后|倒计时|今日|今天|此时|此刻/.test(cta)) ctaType = '限时紧迫';
+  else if (/限量|仅剩|库存|名额|抢完|售罄|不多|有限/.test(cta)) ctaType = '限量稀缺';
+  else if (/闭眼|冲|买|囤|拍|下单|链接|小黄车|下方|左下角/.test(cta)) ctaType = '行动指令';
+  else if (/大家都|姐妹们|口碑|好评|回购|无限回购|人手|都在用/.test(cta)) ctaType = '从众背书';
+  else if (/不如|比|划算|值|赚|省|白菜价|骨折价/.test(cta)) ctaType = '价格锚定';
+  else if (/不满意|退|退款|包退|试用|免费|无风险/.test(cta)) ctaType = '风险逆转';
+
+  // 字数统计
+  const totalLength = text.length;
+  const hookLength = hook.length;
+  const ctaLength = cta.length;
+
+  // 显示结果
+  document.getElementById('analyzerResult').innerHTML = `
+    <div class="analyzer-section">
+      <div class="analyzer-section-title">🔥 前三秒钩子
+        <span class="analyzer-tag tag-green">${hookType}</span>
+        <span style="font-size:11px;color:#999;margin-left:auto;">${hookLength}字</span>
+      </div>
+      <div class="analyzer-section-content">${hook}</div>
+    </div>
+    <div class="analyzer-section">
+      <div class="analyzer-section-title">📖 正文结构
+        <span class="analyzer-tag tag-blue">${bodyType}</span>
+        <span style="font-size:11px;color:#999;margin-left:auto;">${body.length}字</span>
+      </div>
+      <div class="analyzer-section-content">${body}</div>
+    </div>
+    <div class="analyzer-section">
+      <div class="analyzer-section-title">🎯 逼单话术
+        <span class="analyzer-tag tag-orange">${ctaType}</span>
+        <span style="font-size:11px;color:#999;margin-left:auto;">${ctaLength}字</span>
+      </div>
+      <div class="analyzer-section-content">${cta}</div>
+    </div>
+    <div class="analyzer-section" style="background:#f0faf4;">
+      <div class="analyzer-section-title">📊 结构分析</div>
+      <div class="analyzer-section-content" style="font-size:12px;">
+        总字数：${totalLength} | 钩子占比：${Math.round(hookLength/totalLength*100)}% | 逼单占比：${Math.round(ctaLength/totalLength*100)}%
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:10px;">
+      <button class="btn btn-green btn-block" style="flex:1;" onclick="saveAnalyzedCopy()">💾 保存到文案库</button>
+      <button class="btn btn-outline" style="flex:1;" onclick="document.getElementById('analyzerResult').classList.remove('show')">清空</button>
+    </div>
+  `;
+  document.getElementById('analyzerResult').classList.add('show');
+
+  // 暂存分析结果
+  window._lastAnalysis = { text, hook, hookType, body, bodyType, cta, ctaType };
+  toast('分析完成！');
+}
+
+function saveAnalyzedCopy() {
+  if (!window._lastAnalysis) { toast('请先分析文案'); return; }
+  const a = window._lastAnalysis;
+  const data = {
+    id: 'c_' + Date.now(),
+    sourceLink: '',
+    product: '待填写',
+    category: '百货',
+    content: a.text,
+    hook: a.hook,
+    hookType: a.hookType,
+    body: a.body,
+    cta: a.cta,
+    ctaType: a.ctaType,
+    createdAt: Date.now()
+  };
+  db.copies.push(data);
+  saveData();
+  document.getElementById('analyzerInput').value = '';
+  document.getElementById('analyzerResult').classList.remove('show');
+  renderCopies();
+  renderHome();
+  toast('已保存到文案库，可编辑补充产品信息');
+}
+
 function renderCopies() {
   const search = (document.getElementById('copySearch')?.value || '').toLowerCase();
   const filter = document.getElementById('copyFilter')?.value || '';
