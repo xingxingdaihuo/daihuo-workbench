@@ -1292,6 +1292,7 @@ function renderCopies() {
           </div>
         </div>
         <div style="display:flex;gap:4px;">
+          ${c.sourceLink?`<a href="${c.sourceLink}" target="_blank" style="text-decoration:none;"><button class="btn btn-sm btn-outline">🔗 视频</button></a>`:''}
           <button class="btn btn-sm btn-outline" onclick="adaptCopy('${c.id}')">改编</button>
           <button class="btn btn-sm btn-outline" onclick="openCopyModal('${c.id}')">编辑</button>
         </div>
@@ -1637,7 +1638,7 @@ function renderProducts() {
   }
   container.innerHTML = `
     <thead><tr>
-      <th>排名</th><th>产品</th><th>品类</th><th>销量</th><th>佣金率</th><th>流量</th>
+      <th>排名</th><th>产品</th><th>品类</th><th>销量</th><th>佣金率</th><th>流量</th><th>链接</th>
     </tr></thead>
     <tbody>
       ${list.map((p,i) => `
@@ -1648,6 +1649,7 @@ function renderProducts() {
           <td style="font-weight:600;color:var(--green);">${fmt(p.sales)}</td>
           <td style="color:var(--orange);font-weight:600;">${p.commission||0}%</td>
           <td><span class="tag ${p.traffic==='投流'?'tag-red':'tag-green'}">${p.traffic||'-'}</span></td>
+          <td>${p.link?`<a href="${p.link}" target="_blank" style="color:var(--green);font-size:18px;text-decoration:none;">🔗</a>`:'<span style="color:#ccc">—</span>'}</td>
         </tr>
       `).join('')}
     </tbody>
@@ -1691,6 +1693,10 @@ function openProductModal(id) {
       <label class="form-label">备注</label>
       <input class="form-input" id="pNote" placeholder="如：丝飘抽纸、30包大箱装" value="${p?p.note||'':''}">
     </div>
+    <div class="form-group">
+      <label class="form-label">抖音视频链接（可选）</label>
+      <input class="form-input" id="pLink" placeholder="粘贴抖音视频链接" value="${p?p.link||'':''}">
+    </div>
     <div style="display:flex;gap:10px;margin-top:16px;">
       ${id?`<button class="btn btn-outline" style="flex:1;color:#ff3b30;border-color:#ff3b30" onclick="deleteProduct('${id}')">删除</button>`:''}
       <button class="btn btn-green btn-block" style="flex:1" onclick="saveProduct('${id||''}')">保存</button>
@@ -1709,6 +1715,7 @@ function saveProduct(id) {
     sales: parseInt(document.getElementById('pSales').value) || 0,
     commission: parseFloat(document.getElementById('pCommission').value) || 0,
     note: document.getElementById('pNote').value.trim(),
+    link: document.getElementById('pLink').value.trim(),
   };
   if (id) {
     const idx = db.products.findIndex(x => x.id === id);
@@ -1816,6 +1823,7 @@ function renderPeerDetail() {
             <span>📦 <b>${v.product||'-'}</b></span>
             <span>销量 <b>${fmt(v.sales)}</b></span>
             <span>👍 ${fmt(v.likes)}</span>
+            ${v.link?`<a href="${v.link}" target="_blank" style="color:var(--green);font-size:18px;text-decoration:none;margin-left:auto;">🔗</a>`:''}
           </div>
           <div style="display:flex;gap:6px;margin-top:6px;">
             <button class="btn btn-sm btn-outline" onclick="openPeerVideoModal('${v.accountId}','${v.id}')">编辑</button>
@@ -1911,6 +1919,10 @@ function openPeerVideoModal(accountId, videoId) {
       <label class="form-label">发布日期</label>
       <input class="form-input" id="pvDate" type="date" value="${v?v.date||today():today()}">
     </div>
+    <div class="form-group">
+      <label class="form-label">抖音视频链接（可选）</label>
+      <input class="form-input" id="pvLink" placeholder="粘贴抖音视频链接" value="${v?v.link||'':''}">
+    </div>
     <div style="display:flex;gap:10px;margin-top:16px;">
       ${videoId?`<button class="btn btn-outline" style="flex:1;color:#ff3b30;border-color:#ff3b30" onclick="deletePeerVideo('${videoId}')">删除</button>`:''}
       <button class="btn btn-green btn-block" style="flex:1" onclick="savePeerVideo('${accountId}','${videoId||''}')">保存</button>
@@ -1930,6 +1942,7 @@ function savePeerVideo(accountId, videoId) {
     likes: parseInt(document.getElementById('pvLikes').value) || 0,
     traffic: document.getElementById('pvTraffic').value,
     date: document.getElementById('pvDate').value,
+    link: document.getElementById('pvLink').value.trim(),
   };
   if (!db.peerVideos) db.peerVideos = [];
   if (videoId) {
