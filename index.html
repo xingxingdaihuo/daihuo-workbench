@@ -1,0 +1,1742 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+<title>带货工作台</title>
+<style>
+:root {
+  --green: #07c160;
+  --green-light: #e8f8ee;
+  --green-dark: #06ad56;
+  --bg: #f5f7f5;
+  --card: #ffffff;
+  --text: #1a1a1a;
+  --text-dim: #888;
+  --text-light: #bbb;
+  --border: #eee;
+  --orange: #ff9500;
+  --red: #ff3b30;
+  --blue: #007aff;
+  --radius: 16px;
+  --shadow: 0 2px 12px rgba(0,0,0,0.06);
+}
+
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 14px;
+  padding-bottom: 70px;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ===== 顶部打卡栏 ===== */
+.header {
+  background: linear-gradient(135deg, var(--green), var(--green-dark));
+  color: white;
+  padding: 16px 20px 20px;
+  position: sticky;
+  top: 0;
+  z-index: 50;
+}
+
+.header-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.header-title {
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.header-date {
+  font-size: 12px;
+  opacity: 0.85;
+}
+
+.streak-badge {
+  background: rgba(255,255,255,0.2);
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* 完成率环形进度 */
+.progress-section {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.progress-ring {
+  width: 64px;
+  height: 64px;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.progress-ring svg {
+  transform: rotate(-90deg);
+}
+
+.progress-ring circle {
+  fill: none;
+  stroke-width: 6;
+}
+
+.progress-ring .bg-circle {
+  stroke: rgba(255,255,255,0.25);
+}
+
+.progress-ring .fg-circle {
+  stroke: white;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 0.5s;
+}
+
+.progress-text {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%,-50%);
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.progress-info h3 {
+  font-size: 15px;
+  margin-bottom: 4px;
+}
+
+.progress-info p {
+  font-size: 12px;
+  opacity: 0.85;
+}
+
+/* ===== 页面容器 ===== */
+.page {
+  display: none;
+  padding: 16px;
+}
+
+.page.active {
+  display: block;
+}
+
+/* ===== 快捷卡片 ===== */
+.quick-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.quick-card {
+  background: var(--card);
+  border-radius: var(--radius);
+  padding: 16px;
+  box-shadow: var(--shadow);
+  cursor: pointer;
+  transition: transform 0.15s;
+}
+
+.quick-card:active {
+  transform: scale(0.97);
+}
+
+.quick-icon {
+  font-size: 28px;
+  margin-bottom: 8px;
+}
+
+.quick-card h4 {
+  font-size: 14px;
+  margin-bottom: 4px;
+}
+
+.quick-card p {
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
+/* ===== 卡片 ===== */
+.card {
+  background: var(--card);
+  border-radius: var(--radius);
+  padding: 16px;
+  box-shadow: var(--shadow);
+  margin-bottom: 12px;
+}
+
+.card-title {
+  font-size: 15px;
+  font-weight: 600;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.card-title .more {
+  font-size: 12px;
+  color: var(--green);
+  font-weight: 400;
+}
+
+/* ===== 拍摄计划列表 ===== */
+.plan-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.plan-item:last-child {
+  border-bottom: none;
+}
+
+.plan-check {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 2px solid var(--text-light);
+  flex-shrink: 0;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.plan-check.done {
+  background: var(--green);
+  border-color: var(--green);
+  color: white;
+  font-size: 14px;
+}
+
+.plan-check.shooting {
+  border-color: var(--orange);
+  background: #fff5e6;
+}
+
+.plan-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.plan-name {
+  font-size: 14px;
+  font-weight: 500;
+  margin-bottom: 2px;
+}
+
+.plan-meta {
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
+.plan-status {
+  font-size: 12px;
+  padding: 2px 10px;
+  border-radius: 12px;
+  font-weight: 500;
+}
+
+.status-todo {
+  background: #f0f0f0;
+  color: var(--text-dim);
+}
+
+.status-doing {
+  background: #fff5e6;
+  color: var(--orange);
+}
+
+.status-done {
+  background: var(--green-light);
+  color: var(--green);
+}
+
+.plan-item.completed .plan-name {
+  text-decoration: line-through;
+  color: var(--text-dim);
+}
+
+/* ===== 按钮 ===== */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 20px;
+  border-radius: 10px;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  font-family: inherit;
+  transition: opacity 0.2s;
+}
+
+.btn:active { opacity: 0.8; }
+
+.btn-green {
+  background: var(--green);
+  color: white;
+}
+
+.btn-outline {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text);
+}
+
+.btn-sm {
+  padding: 6px 14px;
+  font-size: 12px;
+}
+
+.btn-block {
+  width: 100%;
+}
+
+/* ===== 标签 ===== */
+.tag {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.tag-green { background: var(--green-light); color: var(--green); }
+.tag-orange { background: #fff5e6; color: var(--orange); }
+.tag-blue { background: #e6f0ff; color: var(--blue); }
+.tag-red { background: #ffe6e6; color: var(--red); }
+.tag-gray { background: #f0f0f0; color: var(--text-dim); }
+
+/* ===== 文案卡片 ===== */
+.copy-item {
+  padding: 14px;
+  background: #fafafa;
+  border-radius: 12px;
+  margin-bottom: 10px;
+}
+
+.copy-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 8px;
+}
+
+.copy-product {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.copy-content {
+  font-size: 13px;
+  line-height: 1.7;
+  color: #333;
+  margin-bottom: 10px;
+  white-space: pre-wrap;
+}
+
+.copy-analysis {
+  border-top: 1px dashed var(--border);
+  padding-top: 8px;
+  margin-top: 8px;
+}
+
+.copy-analysis-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 4px;
+  font-size: 12px;
+}
+
+.copy-analysis-label {
+  color: var(--text-dim);
+  flex-shrink: 0;
+  width: 70px;
+}
+
+.copy-analysis-value {
+  color: var(--text);
+  flex: 1;
+}
+
+.copy-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+/* ===== 视频列表 ===== */
+.video-item {
+  padding: 14px;
+  background: #fafafa;
+  border-radius: 12px;
+  margin-bottom: 10px;
+}
+
+.video-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 6px;
+}
+
+.video-title {
+  font-size: 14px;
+  font-weight: 500;
+  flex: 1;
+  margin-right: 8px;
+}
+
+.video-tags {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.video-meta {
+  font-size: 12px;
+  color: var(--text-dim);
+  margin-bottom: 6px;
+}
+
+.video-stats {
+  display: flex;
+  gap: 16px;
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
+.video-stats span b {
+  color: var(--text);
+  font-weight: 600;
+}
+
+/* ===== 产品榜表格 ===== */
+.product-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.product-table th {
+  text-align: left;
+  font-size: 12px;
+  color: var(--text-dim);
+  font-weight: 500;
+  padding: 8px 6px;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+
+.product-table td {
+  padding: 10px 6px;
+  font-size: 13px;
+  border-bottom: 1px solid var(--border);
+}
+
+.rank-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.rank-1 { background: #ffd700; color: #8a6d00; }
+.rank-2 { background: #c0c0c0; color: #555; }
+.rank-3 { background: #cd7f32; color: white; }
+.rank-other { background: #f0f0f0; color: var(--text-dim); }
+
+/* ===== 统计卡片 ===== */
+.stat-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.stat-mini {
+  text-align: center;
+}
+
+.stat-mini-value {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--green);
+}
+
+.stat-mini-label {
+  font-size: 11px;
+  color: var(--text-dim);
+  margin-top: 2px;
+}
+
+/* ===== 图表 ===== */
+.chart-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  height: 140px;
+  padding: 10px 0;
+}
+
+.chart-bar-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+.chart-bar {
+  width: 100%;
+  max-width: 40px;
+  background: var(--green);
+  border-radius: 6px 6px 0 0;
+  min-height: 4px;
+  transition: height 0.4s;
+}
+
+.chart-bar.orange { background: var(--orange); }
+.chart-bar.blue { background: var(--blue); }
+.chart-bar.red { background: var(--red); }
+
+.chart-bar-label {
+  font-size: 10px;
+  color: var(--text-dim);
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 60px;
+}
+
+.chart-bar-value {
+  font-size: 11px;
+  font-weight: 600;
+}
+
+/* 饼图 */
+.pie-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  padding: 10px 0;
+}
+
+.pie-legend {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.pie-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+}
+
+.pie-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+/* ===== 底部Tab ===== */
+.tabbar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: white;
+  border-top: 1px solid var(--border);
+  display: flex;
+  z-index: 100;
+  padding-bottom: env(safe-area-inset-bottom, 0);
+}
+
+.tab-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 8px 0;
+  color: var(--text-dim);
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.tab-item.active {
+  color: var(--green);
+}
+
+.tab-icon {
+  font-size: 22px;
+}
+
+.tab-label {
+  font-size: 10px;
+}
+
+/* ===== 模态框 ===== */
+.modal-mask {
+  display: none;
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.5);
+  z-index: 200;
+  justify-content: center;
+  align-items: flex-end;
+}
+
+.modal-mask.show {
+  display: flex;
+}
+
+.modal-sheet {
+  background: white;
+  border-radius: 20px 20px 0 0;
+  width: 100%;
+  max-height: 85vh;
+  overflow-y: auto;
+  padding: 20px;
+  animation: slideUp 0.3s;
+}
+
+@keyframes slideUp {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+.modal-handle {
+  width: 36px;
+  height: 4px;
+  background: var(--border);
+  border-radius: 2px;
+  margin: 0 auto 16px;
+}
+
+.modal-title {
+  font-size: 17px;
+  font-weight: 600;
+  margin-bottom: 16px;
+  text-align: center;
+}
+
+/* ===== 表单 ===== */
+.form-group {
+  margin-bottom: 14px;
+}
+
+.form-label {
+  font-size: 13px;
+  color: var(--text-dim);
+  margin-bottom: 6px;
+  display: block;
+}
+
+.form-input, .form-select, .form-textarea {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font-size: 14px;
+  font-family: inherit;
+  background: #fafafa;
+  color: var(--text);
+}
+
+.form-input:focus, .form-select:focus, .form-textarea:focus {
+  outline: none;
+  border-color: var(--green);
+  background: white;
+}
+
+.form-textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+/* ===== 空状态 ===== */
+.empty {
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--text-dim);
+}
+
+.empty-icon {
+  font-size: 48px;
+  margin-bottom: 12px;
+  opacity: 0.3;
+}
+
+.empty p {
+  font-size: 14px;
+  margin-bottom: 12px;
+}
+
+/* ===== 搜索栏 ===== */
+.search-bar {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.search-input {
+  flex: 1;
+  padding: 8px 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font-size: 13px;
+  background: white;
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: var(--green);
+}
+
+.filter-select {
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font-size: 13px;
+  background: white;
+  font-family: inherit;
+}
+
+/* ===== Toast ===== */
+.toast {
+  position: fixed;
+  bottom: 90px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0,0,0,0.8);
+  color: white;
+  padding: 8px 20px;
+  border-radius: 20px;
+  font-size: 13px;
+  z-index: 300;
+  display: none;
+  white-space: nowrap;
+}
+
+.toast.show {
+  display: block;
+}
+
+/* ===== 滚动条 ===== */
+::-webkit-scrollbar { width: 0; }
+
+/* ===== FAB ===== */
+.fab {
+  position: fixed;
+  right: 20px;
+  bottom: 86px;
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: var(--green);
+  color: white;
+  border: none;
+  font-size: 24px;
+  box-shadow: 0 4px 16px rgba(7,193,96,0.4);
+  cursor: pointer;
+  z-index: 90;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.fab:active {
+  transform: scale(0.92);
+}
+</style>
+</head>
+<body>
+
+<!-- 顶部打卡栏 -->
+<div class="header">
+  <div class="header-top">
+    <div>
+      <div class="header-title">📦 带货工作台</div>
+      <div class="header-date" id="todayDate"></div>
+    </div>
+    <div class="streak-badge">🔥 连续 <b id="streakDays">0</b> 天</div>
+  </div>
+  <div class="progress-section">
+    <div class="progress-ring">
+      <svg width="64" height="64">
+        <circle class="bg-circle" cx="32" cy="32" r="28"></circle>
+        <circle class="fg-circle" cx="32" cy="32" r="28" stroke-dasharray="175.9" stroke-dashoffset="175.9" id="progressCircle"></circle>
+      </svg>
+      <div class="progress-text" id="progressPercent">0%</div>
+    </div>
+    <div class="progress-info">
+      <h3>今日拍摄计划</h3>
+      <p id="progressText">已完成 0/0</p>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 首页 ===== -->
+<div class="page active" id="page-home">
+  <div class="quick-grid">
+    <div class="quick-card" onclick="switchTab('plan')">
+      <div class="quick-icon">📋</div>
+      <h4>拍摄计划</h4>
+      <p>管理今日拍摄进度</p>
+    </div>
+    <div class="quick-card" onclick="switchTab('copy')">
+      <div class="quick-icon">📝</div>
+      <h4>爆款文案</h4>
+      <p>抓取·拆解·改编</p>
+    </div>
+    <div class="quick-card" onclick="switchTab('video')">
+      <div class="quick-icon">🎬</div>
+      <h4>视频分析</h4>
+      <p>拍摄风格·流量来源</p>
+    </div>
+    <div class="quick-card" onclick="switchTab('product')">
+      <div class="quick-icon">🛍️</div>
+      <h4>爆款产品榜</h4>
+      <p>销量·佣金·投流</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">📊 数据概览</div>
+    <div class="stat-row">
+      <div class="stat-mini">
+        <div class="stat-mini-value" id="statVideos">0</div>
+        <div class="stat-mini-label">视频</div>
+      </div>
+      <div class="stat-mini">
+        <div class="stat-mini-value" id="statCopies">0</div>
+        <div class="stat-mini-label">文案</div>
+      </div>
+      <div class="stat-mini">
+        <div class="stat-mini-value" id="statProducts">0</div>
+        <div class="stat-mini-label">产品</div>
+      </div>
+      <div class="stat-mini">
+        <div class="stat-mini-value" id="statRate">0%</div>
+        <div class="stat-mini-label">完成率</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">🎬 拍摄风格分布</div>
+    <div class="chart-bars" id="styleChart"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">📈 投流 vs 自然流</div>
+    <div class="pie-container" id="trafficPie"></div>
+  </div>
+</div>
+
+<!-- ===== 拍摄计划页 ===== -->
+<div class="page" id="page-plan">
+  <div class="card">
+    <div class="card-title">
+      📋 今日拍摄计划
+      <span class="more" onclick="openPlanModal()">+ 添加</span>
+    </div>
+    <div id="planList"></div>
+  </div>
+</div>
+
+<!-- ===== 爆款文案页 ===== -->
+<div class="page" id="page-copy">
+  <div class="search-bar">
+    <input class="search-input" id="copySearch" placeholder="搜索文案/产品..." oninput="renderCopies()">
+    <select class="filter-select" id="copyFilter" onchange="renderCopies()">
+      <option value="">全部</option>
+      <option value="百货">百货</option>
+      <option value="美妆">美妆</option>
+      <option value="食品">食品</option>
+      <option value="服饰">服饰</option>
+      <option value="其他">其他</option>
+    </select>
+  </div>
+  <div id="copyList"></div>
+</div>
+
+<!-- ===== 视频分析页 ===== -->
+<div class="page" id="page-video">
+  <div class="search-bar">
+    <input class="search-input" id="videoSearch" placeholder="搜索视频/博主..." oninput="renderVideos()">
+    <select class="filter-select" id="videoStyleFilter" onchange="renderVideos()">
+      <option value="">全部风格</option>
+      <option value="真人口播">真人口播</option>
+      <option value="桌拍">桌拍</option>
+      <option value="动图">动图</option>
+      <option value="随手拍">随手拍</option>
+    </select>
+  </div>
+  <div id="videoList"></div>
+</div>
+
+<!-- ===== 产品榜页 ===== -->
+<div class="page" id="page-product">
+  <div class="search-bar">
+    <input class="search-input" id="productSearch" placeholder="搜索产品名..." oninput="renderProducts()">
+    <select class="filter-select" id="productSort" onchange="renderProducts()">
+      <option value="sales">按销量</option>
+      <option value="commission">按佣金率</option>
+    </select>
+  </div>
+  <div class="card" style="padding:0;">
+    <div style="overflow-x:auto;">
+      <table class="product-table" id="productTable"></table>
+    </div>
+  </div>
+</div>
+
+<!-- FAB -->
+<button class="fab" onclick="fabAction()" id="fabBtn">+</button>
+
+<!-- 底部Tab -->
+<div class="tabbar">
+  <div class="tab-item active" onclick="switchTab('home')" data-tab="home">
+    <div class="tab-icon">🏠</div><div class="tab-label">首页</div>
+  </div>
+  <div class="tab-item" onclick="switchTab('plan')" data-tab="plan">
+    <div class="tab-icon">📋</div><div class="tab-label">计划</div>
+  </div>
+  <div class="tab-item" onclick="switchTab('copy')" data-tab="copy">
+    <div class="tab-icon">📝</div><div class="tab-label">文案</div>
+  </div>
+  <div class="tab-item" onclick="switchTab('video')" data-tab="video">
+    <div class="tab-icon">🎬</div><div class="tab-label">视频</div>
+  </div>
+  <div class="tab-item" onclick="switchTab('product')" data-tab="product">
+    <div class="tab-icon">🛍️</div><div class="tab-label">产品</div>
+  </div>
+</div>
+
+<!-- 模态框 -->
+<div class="modal-mask" id="modalMask">
+  <div class="modal-sheet" id="modalSheet">
+    <div class="modal-handle"></div>
+    <div id="modalContent"></div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ===== 数据存储 =====
+const DB_KEY = 'daihuo_workbench_v2';
+function loadData() {
+  try {
+    const raw = localStorage.getItem(DB_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch(e) {}
+  return { plans:[], copies:[], videos:[], products:[], streak:{days:0,lastDate:''} };
+}
+function saveData() {
+  localStorage.setItem(DB_KEY, JSON.stringify(db));
+}
+let db = loadData();
+
+// ===== 今日日期 =====
+function today() {
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+function todayCN() {
+  const d = new Date();
+  const week = ['日','一','二','三','四','五','六'];
+  return `${d.getMonth()+1}月${d.getDate()}日 周${week[d.getDay()]}`;
+}
+document.getElementById('todayDate').textContent = todayCN();
+
+// ===== 连续打卡 =====
+function updateStreak() {
+  const todayStr = today();
+  if (db.streak.lastDate === todayStr) {
+    // 今天已打卡
+  } else if (db.streak.lastDate) {
+    const last = new Date(db.streak.lastDate);
+    const now = new Date(todayStr);
+    const diff = (now - last) / 86400000;
+    if (diff === 1) {
+      // 连续
+    } else if (diff > 1) {
+      db.streak.days = 0;
+    }
+  }
+  // 有计划就算打卡
+  if (db.plans.filter(p => p.date === todayStr).length > 0) {
+    if (db.streak.lastDate !== todayStr) {
+      db.streak.days++;
+      db.streak.lastDate = todayStr;
+      saveData();
+    }
+  }
+  document.getElementById('streakDays').textContent = db.streak.days;
+}
+
+// ===== 进度环 =====
+function updateProgress() {
+  const todayPlans = db.plans.filter(p => p.date === today());
+  const total = todayPlans.length;
+  const done = todayPlans.filter(p => p.status === 'done').length;
+  const percent = total > 0 ? Math.round(done/total*100) : 0;
+  const circle = document.getElementById('progressCircle');
+  const circumference = 175.9;
+  circle.style.strokeDashoffset = circumference - (percent/100)*circumference;
+  document.getElementById('progressPercent').textContent = percent + '%';
+  document.getElementById('progressText').textContent = `已完成 ${done}/${total}`;
+  document.getElementById('statRate').textContent = percent + '%';
+}
+
+// ===== Tab切换 =====
+function switchTab(tab) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-' + tab).classList.add('active');
+  document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
+  document.querySelector(`[data-tab="${tab}"]`).classList.add('active');
+  window.scrollTo(0, 0);
+  if (tab === 'home') { renderHome(); }
+  if (tab === 'plan') { renderPlans(); }
+  if (tab === 'copy') { renderCopies(); }
+  if (tab === 'video') { renderVideos(); }
+  if (tab === 'product') { renderProducts(); }
+}
+
+// ===== Toast =====
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2000);
+}
+
+// ===== 模态框 =====
+function openModal(html) {
+  document.getElementById('modalContent').innerHTML = html;
+  document.getElementById('modalMask').classList.add('show');
+}
+function closeModal() {
+  document.getElementById('modalMask').classList.remove('show');
+}
+document.getElementById('modalMask').addEventListener('click', function(e) {
+  if (e.target === this) closeModal();
+});
+
+// ===== FAB =====
+function fabAction() {
+  const activeTab = document.querySelector('.tab-item.active').dataset.tab;
+  if (activeTab === 'plan') openPlanModal();
+  else if (activeTab === 'copy') openCopyModal();
+  else if (activeTab === 'video') openVideoModal();
+  else if (activeTab === 'product') openProductModal();
+  else openPlanModal();
+}
+
+// ===== 首页渲染 =====
+function renderHome() {
+  document.getElementById('statVideos').textContent = db.videos.length;
+  document.getElementById('statCopies').textContent = db.copies.length;
+  document.getElementById('statProducts').textContent = db.products.length;
+
+  // 拍摄风格分布
+  const styles = {};
+  db.videos.forEach(v => {
+    const s = v.style || '未分类';
+    styles[s] = (styles[s] || 0) + 1;
+  });
+  const styleEntries = Object.entries(styles);
+  const maxStyle = Math.max(...styleEntries.map(e=>e[1]), 1);
+  const colors = ['','orange','blue','red'];
+  document.getElementById('styleChart').innerHTML = styleEntries.length > 0 ?
+    styleEntries.map(([s,n],i) => `
+      <div class="chart-bar-item">
+        <div class="chart-bar-value">${n}</div>
+        <div class="chart-bar ${colors[i%4]}" style="height:${n/maxStyle*100}px"></div>
+        <div class="chart-bar-label">${s}</div>
+      </div>
+    `).join('') :
+    '<div class="empty"><div class="empty-icon">📊</div><p>暂无数据</p></div>';
+
+  // 投流vs自然流
+  let paid = 0, natural = 0;
+  db.videos.forEach(v => {
+    if (v.traffic === '投流') paid++;
+    else if (v.traffic === '自然流') natural++;
+  });
+  const total = paid + natural;
+  const paidPct = total > 0 ? Math.round(paid/total*100) : 0;
+  const naturalPct = total > 0 ? 100 - paidPct : 0;
+  document.getElementById('trafficPie').innerHTML = total > 0 ? `
+    <svg width="120" height="120" viewBox="0 0 120 120">
+      <circle cx="60" cy="60" r="50" fill="none" stroke="#07c160" stroke-width="20"
+        stroke-dasharray="${paidPct*3.14} 314" transform="rotate(-90 60 60)"/>
+      <circle cx="60" cy="60" r="50" fill="none" stroke="#ff9500" stroke-width="20"
+        stroke-dasharray="${naturalPct*3.14} 314" stroke-dashoffset="${-paidPct*3.14}" transform="rotate(-90 60 60)"/>
+    </svg>
+    <div class="pie-legend">
+      <div class="pie-legend-item"><div class="pie-dot" style="background:#07c160"></div>投流 ${paid}条 ${paidPct}%</div>
+      <div class="pie-legend-item"><div class="pie-dot" style="background:#ff9500"></div>自然流 ${natural}条 ${naturalPct}%</div>
+    </div>
+  ` : '<div class="empty"><div class="empty-icon">📈</div><p>暂无数据</p></div>';
+}
+
+// ===== 拍摄计划 =====
+function renderPlans() {
+  const todayPlans = db.plans.filter(p => p.date === today());
+  const container = document.getElementById('planList');
+  if (todayPlans.length === 0) {
+    container.innerHTML = '<div class="empty"><div class="empty-icon">📋</div><p>今日还没有拍摄计划</p><p style="font-size:12px;color:#bbb">点右上角"+ 添加"开始</p></div>';
+    return;
+  }
+  container.innerHTML = todayPlans.map(p => `
+    <div class="plan-item ${p.status==='done'?'completed':''}">
+      <div class="plan-check ${p.status==='done'?'done':p.status==='doing'?'shooting':''}"
+           onclick="togglePlanStatus('${p.id}')">
+        ${p.status==='done'?'✓':p.status==='doing'?'':''}
+      </div>
+      <div class="plan-info">
+        <div class="plan-name">${p.product}</div>
+        <div class="plan-meta">计划拍 ${p.count} 条 ${p.note?'· '+p.note:''}</div>
+      </div>
+      <span class="plan-status ${p.status==='done'?'status-done':p.status==='doing'?'status-doing':'status-todo'}">
+        ${p.status==='done'?'已拍':p.status==='doing'?'拍摄中':'未拍'}
+      </span>
+    </div>
+  `).join('');
+}
+
+function togglePlanStatus(id) {
+  const p = db.plans.find(x => x.id === id);
+  if (!p) return;
+  if (p.status === 'todo') p.status = 'doing';
+  else if (p.status === 'doing') p.status = 'done';
+  else p.status = 'todo';
+  saveData();
+  renderPlans();
+  updateProgress();
+  updateStreak();
+}
+
+function openPlanModal(id) {
+  const p = id ? db.plans.find(x=>x.id===id) : null;
+  openModal(`
+    <div class="modal-title">${id?'编辑计划':'添加拍摄计划'}</div>
+    <div class="form-group">
+      <label class="form-label">产品名称</label>
+      <input class="form-input" id="planProduct" placeholder="如：丝飘抽纸" value="${p?p.product:''}">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">计划拍摄条数</label>
+        <input class="form-input" id="planCount" type="number" value="${p?p.count:1}" min="1">
+      </div>
+      <div class="form-group">
+        <label class="form-label">状态</label>
+        <select class="form-select" id="planStatus">
+          <option value="todo" ${p&&p.status==='todo'?'selected':''}>未拍</option>
+          <option value="doing" ${p&&p.status==='doing'?'selected':''}>拍摄中</option>
+          <option value="done" ${p&&p.status==='done'?'selected':''}>已拍</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">备注</label>
+      <input class="form-input" id="planNote" placeholder="如：真人口播+桌拍" value="${p?p.note:''}">
+    </div>
+    <div style="display:flex;gap:10px;margin-top:16px;">
+      ${id?`<button class="btn btn-outline" style="flex:1;color:#ff3b30;border-color:#ff3b30" onclick="deletePlan('${id}')">删除</button>`:''}
+      <button class="btn btn-green btn-block" style="flex:1" onclick="savePlan('${id||''}')">保存</button>
+    </div>
+    <div style="height:20px;"></div>
+  `);
+}
+
+function savePlan(id) {
+  const product = document.getElementById('planProduct').value.trim();
+  if (!product) { toast('请填写产品名称'); return; }
+  const data = {
+    product,
+    count: parseInt(document.getElementById('planCount').value) || 1,
+    status: document.getElementById('planStatus').value,
+    note: document.getElementById('planNote').value.trim(),
+    date: today()
+  };
+  if (id) {
+    const idx = db.plans.findIndex(x => x.id === id);
+    db.plans[idx] = { ...db.plans[idx], ...data };
+  } else {
+    data.id = 'p_' + Date.now();
+    db.plans.push(data);
+  }
+  saveData();
+  closeModal();
+  renderPlans();
+  updateProgress();
+  updateStreak();
+  toast(id?'已更新':'已添加');
+}
+
+function deletePlan(id) {
+  db.plans = db.plans.filter(x => x.id !== id);
+  saveData();
+  closeModal();
+  renderPlans();
+  updateProgress();
+  toast('已删除');
+}
+
+// ===== 爆款文案 =====
+function renderCopies() {
+  const search = (document.getElementById('copySearch')?.value || '').toLowerCase();
+  const filter = document.getElementById('copyFilter')?.value || '';
+  let list = db.copies.filter(c => {
+    const ms = !search || (c.content||'').toLowerCase().includes(search) || (c.product||'').toLowerCase().includes(search);
+    const mf = !filter || c.category === filter;
+    return ms && mf;
+  });
+  const container = document.getElementById('copyList');
+  if (list.length === 0) {
+    container.innerHTML = '<div class="card"><div class="empty"><div class="empty-icon">📝</div><p>暂无文案</p><p style="font-size:12px;color:#bbb">点右下角+添加爆款文案</p></div></div>';
+    return;
+  }
+  container.innerHTML = list.map(c => `
+    <div class="card">
+      <div class="copy-header">
+        <div>
+          <div class="copy-product">${c.product||'未知产品'}</div>
+          <div style="margin-top:2px;">
+            <span class="tag tag-green">${c.category||'未分类'}</span>
+            ${c.sourceLink?'<span class="tag tag-gray" style="margin-left:4px">有来源</span>':''}
+          </div>
+        </div>
+        <div style="display:flex;gap:4px;">
+          <button class="btn btn-sm btn-outline" onclick="adaptCopy('${c.id}')">改编</button>
+          <button class="btn btn-sm btn-outline" onclick="openCopyModal('${c.id}')">编辑</button>
+        </div>
+      </div>
+      <div class="copy-content">${c.content||''}</div>
+      <div class="copy-analysis">
+        <div class="copy-analysis-row">
+          <div class="copy-analysis-label">🔥 前三秒钩子</div>
+          <div class="copy-analysis-value">${c.hookType?c.hookType+'型':''} ${c.hook||''}</div>
+        </div>
+        <div class="copy-analysis-row">
+          <div class="copy-analysis-label">📖 正文结构</div>
+          <div class="copy-analysis-value">${c.body||''}</div>
+        </div>
+        <div class="copy-analysis-row">
+          <div class="copy-analysis-label">🎯 逼单话术</div>
+          <div class="copy-analysis-value">${c.ctaType?c.ctaType+'型':''} ${c.cta||''}</div>
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function openCopyModal(id) {
+  const c = id ? db.copies.find(x=>x.id===id) : null;
+  openModal(`
+    <div class="modal-title">${id?'编辑文案':'添加爆款文案'}</div>
+    <div class="form-group">
+      <label class="form-label">抖音视频链接（可选，辅助提取）</label>
+      <input class="form-input" id="copyLink" placeholder="粘贴抖音视频链接" value="${c?c.sourceLink||'':''}" onblur="autoFillCopy()">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">产品名称</label>
+        <input class="form-input" id="copyProduct" placeholder="产品名" value="${c?c.product||'':''}">
+      </div>
+      <div class="form-group">
+        <label class="form-label">品类</label>
+        <select class="form-select" id="copyCategory">
+          ${['百货','美妆','食品','服饰','其他'].map(cat=>`<option value="${cat}" ${c&&c.category===cat?'selected':''}>${cat}</option>`).join('')}
+        </select>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">完整文案</label>
+      <textarea class="form-textarea" id="copyContent" placeholder="粘贴完整文案内容..." style="min-height:100px;">${c?c.content||'':''}</textarea>
+    </div>
+    <div class="form-group">
+      <label class="form-label">🔥 前三秒钩子</label>
+      <input class="form-input" id="copyHook" placeholder="如：还在花200块买遮瑕？" value="${c?c.hook||'':''}">
+      <select class="form-select" id="copyHookType" style="margin-top:6px;">
+        ${['痛点提问','反常识','价格诱惑','效果展示','榜单权威','其他'].map(t=>`<option value="${t}" ${c&&c.hookType===t?'selected':''}>${t}</option>`).join('')}
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">📖 正文结构</label>
+      <textarea class="form-textarea" id="copyBody" placeholder="如：三个色号上脸对比，展示遮瑕效果">${c?c.body||'':''}</textarea>
+    </div>
+    <div class="form-group">
+      <label class="form-label">🎯 逼单话术</label>
+      <input class="form-input" id="copyCta" placeholder="如：下方小黄车，今天有买一送一" value="${c?c.cta||'':''}">
+      <select class="form-select" id="copyCtaType" style="margin-top:6px;">
+        ${['限时优惠','限量抢购','从众心理','紧迫感','价格锚定','其他'].map(t=>`<option value="${t}" ${c&&c.ctaType===t?'selected':''}>${t}</option>`).join('')}
+      </select>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:16px;">
+      ${id?`<button class="btn btn-outline" style="flex:1;color:#ff3b30;border-color:#ff3b30" onclick="deleteCopy('${id}')">删除</button>`:''}
+      <button class="btn btn-green btn-block" style="flex:1" onclick="saveCopy('${id||''}')">保存</button>
+    </div>
+    <div style="height:20px;"></div>
+  `);
+}
+
+function autoFillCopy() {
+  const link = document.getElementById('copyLink').value.trim();
+  if (link && (link.includes('douyin.com') || link.includes('iesdouyin'))) {
+    toast('已识别抖音链接，请补充文案内容');
+  }
+}
+
+function saveCopy(id) {
+  const content = document.getElementById('copyContent').value.trim();
+  const product = document.getElementById('copyProduct').value.trim();
+  if (!product) { toast('请填写产品名称'); return; }
+  const data = {
+    sourceLink: document.getElementById('copyLink').value.trim(),
+    product,
+    category: document.getElementById('copyCategory').value,
+    content,
+    hook: document.getElementById('copyHook').value.trim(),
+    hookType: document.getElementById('copyHookType').value,
+    body: document.getElementById('copyBody').value.trim(),
+    cta: document.getElementById('copyCta').value.trim(),
+    ctaType: document.getElementById('copyCtaType').value,
+  };
+  if (id) {
+    const idx = db.copies.findIndex(x => x.id === id);
+    db.copies[idx] = { ...db.copies[idx], ...data };
+  } else {
+    data.id = 'c_' + Date.now();
+    data.createdAt = Date.now();
+    db.copies.push(data);
+  }
+  saveData();
+  closeModal();
+  renderCopies();
+  renderHome();
+  toast(id?'已更新':'已添加');
+}
+
+function deleteCopy(id) {
+  db.copies = db.copies.filter(x => x.id !== id);
+  saveData();
+  closeModal();
+  renderCopies();
+  renderHome();
+  toast('已删除');
+}
+
+function adaptCopy(id) {
+  const c = db.copies.find(x => x.id === id);
+  if (!c) return;
+  // 简单改编：替换关键词
+  openModal(`
+    <div class="modal-title">📝 文案改编</div>
+    <div class="form-group">
+      <label class="form-label">原产品名</label>
+      <input class="form-input" value="${c.product}" disabled style="background:#f0f0f0;">
+    </div>
+    <div class="form-group">
+      <label class="form-label">你的产品名</label>
+      <input class="form-input" id="adaptProduct" placeholder="输入你的产品名" value="${c.product}">
+    </div>
+    <div class="form-group">
+      <label class="form-label">你的产品卖点</label>
+      <input class="form-input" id="adaptPoint" placeholder="如：大容量、便宜、好用">
+    </div>
+    <div class="form-group">
+      <label class="form-label">价格信息</label>
+      <input class="form-input" id="adaptPrice" placeholder="如：29.9元5包">
+    </div>
+    <button class="btn btn-green btn-block" onclick="generateAdapt('${id}')">✨ 生成改编文案</button>
+    <div style="height:16px;"></div>
+    <div id="adaptResult"></div>
+    <div style="height:20px;"></div>
+  `);
+}
+
+function generateAdapt(id) {
+  const c = db.copies.find(x => x.id === id);
+  const newProduct = document.getElementById('adaptProduct').value.trim() || c.product;
+  const point = document.getElementById('adaptPoint').value.trim() || '高性价比';
+  const price = document.getElementById('adaptPrice').value.trim() || '超值价';
+
+  const hook = c.hook ? c.hook.replace(new RegExp(c.product,'g'), newProduct) : `${newProduct}用户必看！`;
+  const body = c.body ? c.body.replace(new RegExp(c.product,'g'), newProduct) : `${newProduct}，${point}，用过的都说好`;
+  const cta = c.cta ? c.cta.replace(/[\d.]+元/g, price) : `下方链接，${price}带走`;
+
+  document.getElementById('adaptResult').innerHTML = `
+    <div class="card" style="background:#f0faf4;border:1px solid var(--green);">
+      <div class="card-title">✅ 改编结果</div>
+      <div class="copy-analysis-row"><div class="copy-analysis-label">🔥 钩子</div><div class="copy-analysis-value">${hook}</div></div>
+      <div class="copy-analysis-row" style="margin-top:6px;"><div class="copy-analysis-label">📖 正文</div><div class="copy-analysis-value">${body}</div></div>
+      <div class="copy-analysis-row" style="margin-top:6px;"><div class="copy-analysis-label">🎯 逼单</div><div class="copy-analysis-value">${cta}</div></div>
+      <button class="btn btn-green btn-sm btn-block" style="margin-top:10px;" onclick="saveAdapted('${id}','${hook.replace(/'/g,"\\'")}','${body.replace(/'/g,"\\'")}','${cta.replace(/'/g,"\\'")}','${newProduct.replace(/'/g,"\\'")}')">保存为新文案</button>
+    </div>
+  `;
+}
+
+function saveAdapted(origId, hook, body, cta, product) {
+  const orig = db.copies.find(x => x.id === origId);
+  const data = {
+    id: 'c_' + Date.now(),
+    sourceLink: '',
+    product,
+    category: orig ? orig.category : '百货',
+    content: hook + '\n' + body + '\n' + cta,
+    hook, body, cta,
+    hookType: orig ? orig.hookType : '其他',
+    ctaType: orig ? orig.ctaType : '其他',
+    createdAt: Date.now()
+  };
+  db.copies.push(data);
+  saveData();
+  closeModal();
+  renderCopies();
+  toast('改编文案已保存');
+}
+
+// ===== 视频分析 =====
+function renderVideos() {
+  const search = (document.getElementById('videoSearch')?.value || '').toLowerCase();
+  const styleFilter = document.getElementById('videoStyleFilter')?.value || '';
+  let list = db.videos.filter(v => {
+    const ms = !search || (v.title||'').toLowerCase().includes(search) || (v.author||'').toLowerCase().includes(search) || (v.product||'').toLowerCase().includes(search);
+    const mf = !styleFilter || v.style === styleFilter;
+    return ms && mf;
+  });
+  const container = document.getElementById('videoList');
+  if (list.length === 0) {
+    container.innerHTML = '<div class="card"><div class="empty"><div class="empty-icon">🎬</div><p>暂无视频</p><p style="font-size:12px;color:#bbb">点右下角+添加爆款视频</p></div></div>';
+    return;
+  }
+  container.innerHTML = list.map(v => `
+    <div class="card">
+      <div class="video-top">
+        <div class="video-title">${v.title||'无标题'}</div>
+        <div class="video-tags">
+          <span class="tag ${v.style==='真人口播'?'tag-green':v.style==='桌拍'?'tag-blue':v.style==='动图'?'tag-orange':'tag-gray'}">${v.style||'未分类'}</span>
+        </div>
+      </div>
+      <div class="video-meta">${v.author||'未知博主'} · ${v.product||''} · ${v.date||''}</div>
+      <div class="video-stats">
+        <span>👍 <b>${fmt(v.likes)}</b></span>
+        <span>💬 <b>${fmt(v.comments)}</b></span>
+        <span>📦 <b>${fmt(v.sales)}</b></span>
+        <span class="tag ${v.traffic==='投流'?'tag-red':'tag-green'}" style="margin-left:auto;">${v.traffic||'未知'}</span>
+      </div>
+      <div style="display:flex;gap:6px;margin-top:8px;">
+        <button class="btn btn-sm btn-outline" onclick="openVideoModal('${v.id}')">编辑</button>
+        ${v.link?`<button class="btn btn-sm btn-outline" onclick="window.open('${v.link}')">打开链接</button>`:''}
+      </div>
+    </div>
+  `).join('');
+}
+
+function openVideoModal(id) {
+  const v = id ? db.videos.find(x=>x.id===id) : null;
+  openModal(`
+    <div class="modal-title">${id?'编辑视频':'添加爆款视频'}</div>
+    <div class="form-group">
+      <label class="form-label">视频链接（可选）</label>
+      <input class="form-input" id="vLink" placeholder="粘贴抖音视频链接" value="${v?v.link||'':''}">
+    </div>
+    <div class="form-group">
+      <label class="form-label">视频标题</label>
+      <input class="form-input" id="vTitle" placeholder="视频标题" value="${v?v.title||'':''}">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">博主</label>
+        <input class="form-input" id="vAuthor" placeholder="博主昵称" value="${v?v.author||'':''}">
+      </div>
+      <div class="form-group">
+        <label class="form-label">产品名</label>
+        <input class="form-input" id="vProduct" placeholder="带货产品" value="${v?v.product||'':''}">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">拍摄风格</label>
+        <select class="form-select" id="vStyle">
+          ${['真人口播','桌拍','动图','随手拍'].map(s=>`<option value="${s}" ${v&&v.style===s?'selected':''}>${s}</option>`).join('')}
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">流量来源</label>
+        <select class="form-select" id="vTraffic">
+          <option value="投流" ${v&&v.traffic==='投流'?'selected':''}>投流</option>
+          <option value="自然流" ${v&&v.traffic==='自然流'?'selected':''}>自然流</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">点赞数</label>
+        <input class="form-input" id="vLikes" type="number" value="${v?v.likes||0:0}">
+      </div>
+      <div class="form-group">
+        <label class="form-label">评论数</label>
+        <input class="form-input" id="vComments" type="number" value="${v?v.comments||0:0}">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">预估销量</label>
+        <input class="form-input" id="vSales" type="number" value="${v?v.sales||0:0}">
+      </div>
+      <div class="form-group">
+        <label class="form-label">发布日期</label>
+        <input class="form-input" id="vDate" type="date" value="${v?v.date||today():today()}">
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:16px;">
+      ${id?`<button class="btn btn-outline" style="flex:1;color:#ff3b30;border-color:#ff3b30" onclick="deleteVideo('${id}')">删除</button>`:''}
+      <button class="btn btn-green btn-block" style="flex:1" onclick="saveVideo('${id||''}')">保存</button>
+    </div>
+    <div style="height:20px;"></div>
+  `);
+}
+
+function saveVideo(id) {
+  const title = document.getElementById('vTitle').value.trim();
+  if (!title) { toast('请填写视频标题'); return; }
+  const data = {
+    link: document.getElementById('vLink').value.trim(),
+    title,
+    author: document.getElementById('vAuthor').value.trim(),
+    product: document.getElementById('vProduct').value.trim(),
+    style: document.getElementById('vStyle').value,
+    traffic: document.getElementById('vTraffic').value,
+    likes: parseInt(document.getElementById('vLikes').value) || 0,
+    comments: parseInt(document.getElementById('vComments').value) || 0,
+    sales: parseInt(document.getElementById('vSales').value) || 0,
+    date: document.getElementById('vDate').value,
+  };
+  if (id) {
+    const idx = db.videos.findIndex(x => x.id === id);
+    db.videos[idx] = { ...db.videos[idx], ...data };
+  } else {
+    data.id = 'v_' + Date.now();
+    data.createdAt = Date.now();
+    db.videos.push(data);
+  }
+  saveData();
+  closeModal();
+  renderVideos();
+  renderHome();
+  toast(id?'已更新':'已添加');
+}
+
+function deleteVideo(id) {
+  db.videos = db.videos.filter(x => x.id !== id);
+  saveData();
+  closeModal();
+  renderVideos();
+  renderHome();
+  toast('已删除');
+}
+
+// ===== 产品榜 =====
+function renderProducts() {
+  const search = (document.getElementById('productSearch')?.value || '').toLowerCase();
+  const sort = document.getElementById('productSort')?.value || 'sales';
+  let list = db.products.filter(p => !search || (p.name||'').toLowerCase().includes(search));
+  if (sort === 'sales') list.sort((a,b) => (b.sales||0)-(a.sales||0));
+  else list.sort((a,b) => (b.commission||0)-(a.commission||0));
+
+  const container = document.getElementById('productTable');
+  if (list.length === 0) {
+    container.innerHTML = '<tbody><tr><td colspan="6"><div class="empty"><div class="empty-icon">🛍️</div><p>暂无产品</p><p style="font-size:12px;color:#bbb">点右下角+添加产品</p></div></td></tr></tbody>';
+    return;
+  }
+  container.innerHTML = `
+    <thead><tr>
+      <th>排名</th><th>产品</th><th>品类</th><th>销量</th><th>佣金率</th><th>流量</th>
+    </tr></thead>
+    <tbody>
+      ${list.map((p,i) => `
+        <tr>
+          <td><span class="rank-badge ${i===0?'rank-1':i===1?'rank-2':i===2?'rank-3':'rank-other'}">${i+1}</span></td>
+          <td>${p.name||'-'}${p.note?`<div style="font-size:11px;color:#888;">${p.note}</div>`:''}</td>
+          <td><span class="tag tag-gray">${p.category||'-'}</span></td>
+          <td style="font-weight:600;color:var(--green);">${fmt(p.sales)}</td>
+          <td style="color:var(--orange);font-weight:600;">${p.commission||0}%</td>
+          <td><span class="tag ${p.traffic==='投流'?'tag-red':'tag-green'}">${p.traffic||'-'}</span></td>
+        </tr>
+      `).join('')}
+    </tbody>
+  `;
+}
+
+function openProductModal(id) {
+  const p = id ? db.products.find(x=>x.id===id) : null;
+  openModal(`
+    <div class="modal-title">${id?'编辑产品':'添加爆款产品'}</div>
+    <div class="form-group">
+      <label class="form-label">产品名称</label>
+      <input class="form-input" id="pName" placeholder="产品名称" value="${p?p.name||'':''}">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">品类</label>
+        <select class="form-select" id="pCategory">
+          ${['百货','美妆','食品','服饰','数码','母婴','其他'].map(c=>`<option value="${c}" ${p&&p.category===c?'selected':''}>${c}</option>`).join('')}
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">流量来源</label>
+        <select class="form-select" id="pTraffic">
+          <option value="投流" ${p&&p.traffic==='投流'?'selected':''}>投流</option>
+          <option value="自然流" ${p&&p.traffic==='自然流'?'selected':''}>自然流</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">销量</label>
+        <input class="form-input" id="pSales" type="number" value="${p?p.sales||0:0}">
+      </div>
+      <div class="form-group">
+        <label class="form-label">佣金率(%)</label>
+        <input class="form-input" id="pCommission" type="number" step="0.1" value="${p?p.commission||0:0}">
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">备注</label>
+      <input class="form-input" id="pNote" placeholder="如：丝飘抽纸、30包大箱装" value="${p?p.note||'':''}">
+    </div>
+    <div style="display:flex;gap:10px;margin-top:16px;">
+      ${id?`<button class="btn btn-outline" style="flex:1;color:#ff3b30;border-color:#ff3b30" onclick="deleteProduct('${id}')">删除</button>`:''}
+      <button class="btn btn-green btn-block" style="flex:1" onclick="saveProduct('${id||''}')">保存</button>
+    </div>
+    <div style="height:20px;"></div>
+  `);
+}
+
+function saveProduct(id) {
+  const name = document.getElementById('pName').value.trim();
+  if (!name) { toast('请填写产品名称'); return; }
+  const data = {
+    name,
+    category: document.getElementById('pCategory').value,
+    traffic: document.getElementById('pTraffic').value,
+    sales: parseInt(document.getElementById('pSales').value) || 0,
+    commission: parseFloat(document.getElementById('pCommission').value) || 0,
+    note: document.getElementById('pNote').value.trim(),
+  };
+  if (id) {
+    const idx = db.products.findIndex(x => x.id === id);
+    db.products[idx] = { ...db.products[idx], ...data };
+  } else {
+    data.id = 'pr_' + Date.now();
+    data.createdAt = Date.now();
+    db.products.push(data);
+  }
+  saveData();
+  closeModal();
+  renderProducts();
+  renderHome();
+  toast(id?'已更新':'已添加');
+}
+
+function deleteProduct(id) {
+  db.products = db.products.filter(x => x.id !== id);
+  saveData();
+  closeModal();
+  renderProducts();
+  renderHome();
+  toast('已删除');
+}
+
+// ===== 工具函数 =====
+function fmt(n) {
+  if (!n || n === 0) return '0';
+  if (n >= 100000000) return (n/100000000).toFixed(1) + '亿';
+  if (n >= 10000) return (n/10000).toFixed(1) + 'w';
+  if (n >= 1000) return (n/1000).toFixed(1) + 'k';
+  return n.toString();
+}
+
+// ===== 初始化示例数据 =====
+function initSampleData() {
+  if (db.plans.length === 0 && db.copies.length === 0 && db.videos.length === 0 && db.products.length === 0) {
+    db.plans = [
+      { id:'p_s1', product:'丝飘抽纸', count:3, status:'done', note:'真人口播+桌拍', date: today() },
+      { id:'p_s2', product:'德佑湿厕纸', count:2, status:'doing', note:'随手拍', date: today() },
+      { id:'p_s3', product:'收纳盒', count:1, status:'todo', note:'桌拍', date: today() },
+    ];
+    db.copies = [
+      { id:'c_s1', sourceLink:'', product:'丝飘抽纸', category:'百货',
+        content:'你可千万别停产啊！月薪2700的打工仔可不能没有你！一箱28大包才这个价，柔软亲肤不掉絮，闭眼冲！',
+        hook:'你可千万别停产啊！', hookType:'反常识',
+        body:'月薪2700的打工仔可不能没有你！一箱28大包才这个价', cta:'柔软亲肤不掉絮，闭眼冲！', ctaType:'从众心理',
+        createdAt: Date.now() }
+    ];
+    db.videos = [
+      { id:'v_s1', link:'', title:'用纸大户拼手速！一箱28大包抽纸', author:'糊糊爆爆爆', product:'丝飘抽纸',
+        style:'真人口播', traffic:'投流', likes:152000, comments:8900, sales:12000, date:'2026-07-24', createdAt: Date.now() },
+      { id:'v_s2', link:'', title:'收纳神器一个顶三个', author:'生活研究所', product:'收纳盒',
+        style:'桌拍', traffic:'自然流', likes:89000, comments:5200, sales:8500, date:'2026-07-22', createdAt: Date.now() },
+      { id:'v_s3', link:'', title:'减脂期零食推荐', author:'健身日记', product:'鸡胸肉肠',
+        style:'随手拍', traffic:'投流', likes:234000, comments:12000, sales:25000, date:'2026-07-20', createdAt: Date.now() },
+    ];
+    db.products = [
+      { id:'pr_s1', name:'丝飘抽纸', category:'百货', traffic:'投流', sales:12000, commission:20, note:'28大包箱装', createdAt: Date.now() },
+      { id:'pr_s2', name:'德佑湿厕纸', category:'百货', traffic:'自然流', sales:8500, commission:15, note:'便携独立包装', createdAt: Date.now() },
+      { id:'pr_s3', name:'鸡胸肉肠', category:'食品', traffic:'投流', sales:25000, commission:25, note:'低卡高蛋白', createdAt: Date.now() },
+      { id:'pr_s4', name:'收纳盒', category:'百货', traffic:'自然流', sales:8500, commission:18, note:'大容量免安装', createdAt: Date.now() },
+    ];
+    saveData();
+  }
+}
+
+// ===== 启动 =====
+initSampleData();
+updateStreak();
+updateProgress();
+renderHome();
+</script>
+</body>
+</html>
