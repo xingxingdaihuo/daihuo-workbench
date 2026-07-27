@@ -840,6 +840,11 @@ body {
       <h4>爆款产品榜</h4>
       <p>销量·佣金·投流</p>
     </div>
+    <div class="quick-card" onclick="switchTab('peer')">
+      <div class="quick-icon">👥</div>
+      <h4>同行监控</h4>
+      <p>账号追踪·每日汇总</p>
+    </div>
   </div>
 
   <div class="card">
@@ -933,6 +938,33 @@ body {
   </div>
 </div>
 
+<!-- ===== 同行监控页 ===== -->
+<div class="page" id="page-peer">
+  <div class="search-bar">
+    <input class="search-input" id="peerSearch" placeholder="搜索同行名称..." oninput="renderPeers()">
+    <select class="filter-select" id="peerDateFilter" onchange="renderPeerDetail()">
+      <option value="">全部日期</option>
+    </select>
+  </div>
+  <div class="card">
+    <div class="card-title">
+      👥 关注同行
+      <span class="more" onclick="openPeerAccountModal()">+ 添加</span>
+    </div>
+    <div id="peerAccountList"></div>
+  </div>
+  <div class="card" id="peerDailyCard">
+    <div class="card-title">📅 每日视频追踪 <span class="more" id="peerDateTitle"></span></div>
+    <div class="stat-row">
+      <div class="stat-mini"><div class="stat-mini-value" id="peerTotalVideos">0</div><div class="stat-mini-label">今日视频</div></div>
+      <div class="stat-mini"><div class="stat-mini-value" id="peerTotalSales">0</div><div class="stat-mini-label">总销量</div></div>
+      <div class="stat-mini"><div class="stat-mini-value" id="peerPaid">0</div><div class="stat-mini-label">投流</div></div>
+      <div class="stat-mini"><div class="stat-mini-value" id="peerNatural">0</div><div class="stat-mini-label">自然流</div></div>
+    </div>
+    <div id="peerDetailList"></div>
+  </div>
+</div>
+
 <!-- FAB -->
 <button class="fab" onclick="fabAction()" id="fabBtn">+</button>
 
@@ -950,9 +982,12 @@ body {
   <div class="tab-item" onclick="switchTab('video')" data-tab="video">
     <div class="tab-icon">🎬</div><div class="tab-label">视频</div>
   </div>
-  <div class="tab-item" onclick="switchTab('product')" data-tab="product">
-    <div class="tab-icon">🛍️</div><div class="tab-label">产品</div>
-  </div>
+    <div class="tab-item" onclick="switchTab('product')" data-tab="product">
+      <div class="tab-icon">🛍️</div><div class="tab-label">产品</div>
+    </div>
+    <div class="tab-item" onclick="switchTab('peer')" data-tab="peer">
+      <div class="tab-icon">👥</div><div class="tab-label">同行</div>
+    </div>
 </div>
 
 <!-- 模态框 -->
@@ -974,7 +1009,7 @@ function loadData() {
     const raw = localStorage.getItem(DB_KEY);
     if (raw) return JSON.parse(raw);
   } catch(e) {}
-  return { plans:[], copies:[], videos:[], products:[], streak:{days:0,lastDate:''} };
+  return { plans:[], copies:[], videos:[], products:[], peerAccounts:[], peerVideos:[], streak:{days:0,lastDate:''} };
 }
 function saveData() {
   localStorage.setItem(DB_KEY, JSON.stringify(db));
@@ -1045,6 +1080,7 @@ function switchTab(tab) {
   if (tab === 'copy') { renderCopies(); }
   if (tab === 'video') { renderVideos(); }
   if (tab === 'product') { renderProducts(); }
+  if (tab === 'peer') { renderPeers(); }
 }
 
 // ===== Toast =====
@@ -1073,7 +1109,8 @@ function fabAction() {
   if (activeTab === 'plan') openPlanModal();
   else if (activeTab === 'copy') openCopyModal();
   else if (activeTab === 'video') openVideoModal();
-  else if (activeTab === 'product') openProductModal();
+  else   if (activeTab === 'product') openProductModal();
+  else if (activeTab === 'peer') openPeerAccountModal();
   else openPlanModal();
 }
 
@@ -1697,7 +1734,225 @@ function deleteProduct(id) {
   toast('已删除');
 }
 
-// ===== 工具函数 =====
+// ===== 同行监控 =====
+function renderPeers() {
+  const search = (document.getElementById('peerSearch')?.value || '').toLowerCase();
+  let accounts = db.peerAccounts || [];
+  if (search) accounts = accounts.filter(a => (a.name||'').toLowerCase().includes(search));
+
+  const container = document.getElementById('peerAccountList');
+  if (accounts.length === 0) {
+    container.innerHTML = '<div class="empty"><div class="empty-icon">👥</div><p>还没有关注同行</p><p style="font-size:12px;color:#bbb">点右上角"+ 添加"添加同行账号</p></div>';
+  } else {
+    container.innerHTML = accounts.map(a => {
+      const todayVids = (db.peerVideos || []).filter(v => v.accountId === a.id && v.date === today());
+      const todaySales = todayVids.reduce((s,v) => s + (v.sales||0), 0);
+      return `<div class="plan-item">
+        <div class="plan-info">
+          <div class="plan-name">${a.name}</div>
+          <div class="plan-meta">${a.note||''} · 今日${todayVids.length}条视频 · 销量${fmt(todaySales)}</div>
+        </div>
+        <div style="display:flex;gap:4px;">
+          <button class="btn btn-sm btn-outline" onclick="openPeerVideoModal('${a.id}')">+视频</button>
+          <button class="btn btn-sm btn-outline" onclick="openPeerAccountModal('${a.id}')">编辑</button>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  // 更新日期筛选
+  const dates = [...new Set((db.peerVideos||[]).map(v => v.date))].sort().reverse();
+  const dateFilter = document.getElementById('peerDateFilter');
+  const currentVal = dateFilter.value;
+  dateFilter.innerHTML = '<option value="">全部日期</option>' + dates.map(d => `<option value="${d}" ${d===currentVal?'selected':''}>${d}</option>`).join('');
+
+  renderPeerDetail();
+}
+
+function renderPeerDetail() {
+  const filterDate = document.getElementById('peerDateFilter')?.value || '';
+  let videos = db.peerVideos || [];
+  const accounts = db.peerAccounts || [];
+
+  if (filterDate) videos = videos.filter(v => v.date === filterDate);
+
+  const totalSales = videos.reduce((s,v) => s + (v.sales||0), 0);
+  const paid = videos.filter(v => v.traffic === '投流').length;
+  const natural = videos.filter(v => v.traffic === '自然流').length;
+
+  document.getElementById('peerTotalVideos').textContent = videos.length;
+  document.getElementById('peerTotalSales').textContent = fmt(totalSales);
+  document.getElementById('peerPaid').textContent = paid;
+  document.getElementById('peerNatural').textContent = natural;
+  document.getElementById('peerDateTitle').textContent = filterDate || '全部日期';
+
+  const container = document.getElementById('peerDetailList');
+  if (videos.length === 0) {
+    container.innerHTML = '<div class="empty"><div class="empty-icon">📅</div><p>暂无视频记录</p></div>';
+    return;
+  }
+
+  // 按账号分组
+  const grouped = {};
+  videos.forEach(v => {
+    const acc = accounts.find(a => a.id === v.accountId);
+    const key = acc ? acc.name : '未知';
+    if (!grouped[key]) grouped[key] = [];
+    grouped[key].push(v);
+  });
+
+  container.innerHTML = Object.entries(grouped).map(([name, vids]) => `
+    <div style="margin-bottom:12px;">
+      <div style="font-size:14px;font-weight:600;margin-bottom:6px;color:var(--green);">${name} (${vids.length}条)</div>
+      ${vids.map(v => `
+        <div class="video-item">
+          <div class="video-top">
+            <div class="video-title" style="font-size:13px;">${v.title||v.product||'无标题'}</div>
+            <div class="video-tags">
+              <span class="tag ${v.traffic==='投流'?'tag-red':'tag-green'}">${v.traffic||'未知'}</span>
+            </div>
+          </div>
+          <div class="video-stats">
+            <span>📦 <b>${v.product||'-'}</b></span>
+            <span>销量 <b>${fmt(v.sales)}</b></span>
+            <span>👍 ${fmt(v.likes)}</span>
+          </div>
+          <div style="display:flex;gap:6px;margin-top:6px;">
+            <button class="btn btn-sm btn-outline" onclick="openPeerVideoModal('${v.accountId}','${v.id}')">编辑</button>
+            <button class="btn btn-sm btn-outline" style="color:#ff3b30;" onclick="deletePeerVideo('${v.id}')">删除</button>
+          </div>
+        </div>
+      `).join('')}
+    </div>
+  `).join('');
+}
+
+function openPeerAccountModal(id) {
+  const a = id ? (db.peerAccounts||[]).find(x => x.id === id) : null;
+  openModal(`
+    <div class="modal-title">${id?'编辑':'添加同行账号'}</div>
+    <div class="form-group">
+      <label class="form-label">账号名称</label>
+      <input class="form-input" id="paName" placeholder="如：糊糊爆爆爆" value="${a?a.name||'':''}">
+    </div>
+    <div class="form-group">
+      <label class="form-label">备注</label>
+      <input class="form-input" id="paNote" placeholder="如：百货类、纸巾品类" value="${a?a.note||'':''}">
+    </div>
+    <div style="display:flex;gap:10px;margin-top:16px;">
+      ${id?`<button class="btn btn-outline" style="flex:1;color:#ff3b30;border-color:#ff3b30" onclick="deletePeerAccount('${id}')">删除</button>`:''}
+      <button class="btn btn-green btn-block" style="flex:1" onclick="savePeerAccount('${id||''}')">保存</button>
+    </div>
+    <div style="height:20px;"></div>
+  `);
+}
+
+function savePeerAccount(id) {
+  const name = document.getElementById('paName').value.trim();
+  if (!name) { toast('请填写账号名称'); return; }
+  const data = { name, note: document.getElementById('paNote').value.trim() };
+  if (!db.peerAccounts) db.peerAccounts = [];
+  if (id) {
+    const idx = db.peerAccounts.findIndex(x => x.id === id);
+    db.peerAccounts[idx] = { ...db.peerAccounts[idx], ...data };
+  } else {
+    data.id = 'pa_' + Date.now();
+    db.peerAccounts.push(data);
+  }
+  saveData();
+  closeModal();
+  renderPeers();
+  toast(id?'已更新':'已添加');
+}
+
+function deletePeerAccount(id) {
+  if (!confirm('确定删除该同行及所有相关视频记录？')) return;
+  db.peerAccounts = (db.peerAccounts||[]).filter(x => x.id !== id);
+  db.peerVideos = (db.peerVideos||[]).filter(x => x.accountId !== id);
+  saveData();
+  closeModal();
+  renderPeers();
+  toast('已删除');
+}
+
+function openPeerVideoModal(accountId, videoId) {
+  const v = videoId ? (db.peerVideos||[]).find(x => x.id === videoId) : null;
+  const acc = (db.peerAccounts||[]).find(x => x.id === accountId);
+  openModal(`
+    <div class="modal-title">${videoId?'编辑':'添加'}视频 - ${acc?acc.name:''}</div>
+    <div class="form-group">
+      <label class="form-label">视频标题</label>
+      <input class="form-input" id="pvTitle" placeholder="视频标题" value="${v?v.title||'':''}">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">带货产品</label>
+        <input class="form-input" id="pvProduct" placeholder="产品名称" value="${v?v.product||'':''}">
+      </div>
+      <div class="form-group">
+        <label class="form-label">销量</label>
+        <input class="form-input" id="pvSales" type="number" value="${v?v.sales||0:0}">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">点赞数</label>
+        <input class="form-input" id="pvLikes" type="number" value="${v?v.likes||0:0}">
+      </div>
+      <div class="form-group">
+        <label class="form-label">流量来源</label>
+        <select class="form-select" id="pvTraffic">
+          <option value="投流" ${v&&v.traffic==='投流'?'selected':''}>投流</option>
+          <option value="自然流" ${v&&v.traffic==='自然流'?'selected':''}>自然流</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">发布日期</label>
+      <input class="form-input" id="pvDate" type="date" value="${v?v.date||today():today()}">
+    </div>
+    <div style="display:flex;gap:10px;margin-top:16px;">
+      ${videoId?`<button class="btn btn-outline" style="flex:1;color:#ff3b30;border-color:#ff3b30" onclick="deletePeerVideo('${videoId}')">删除</button>`:''}
+      <button class="btn btn-green btn-block" style="flex:1" onclick="savePeerVideo('${accountId}','${videoId||''}')">保存</button>
+    </div>
+    <div style="height:20px;"></div>
+  `);
+}
+
+function savePeerVideo(accountId, videoId) {
+  const product = document.getElementById('pvProduct').value.trim();
+  if (!product) { toast('请填写产品名称'); return; }
+  const data = {
+    accountId,
+    title: document.getElementById('pvTitle').value.trim(),
+    product,
+    sales: parseInt(document.getElementById('pvSales').value) || 0,
+    likes: parseInt(document.getElementById('pvLikes').value) || 0,
+    traffic: document.getElementById('pvTraffic').value,
+    date: document.getElementById('pvDate').value,
+  };
+  if (!db.peerVideos) db.peerVideos = [];
+  if (videoId) {
+    const idx = db.peerVideos.findIndex(x => x.id === videoId);
+    db.peerVideos[idx] = { ...db.peerVideos[idx], ...data };
+  } else {
+    data.id = 'pv_' + Date.now();
+    data.createdAt = Date.now();
+    db.peerVideos.push(data);
+  }
+  saveData();
+  closeModal();
+  renderPeers();
+  toast(videoId?'已更新':'已添加');
+}
+
+function deletePeerVideo(id) {
+  db.peerVideos = (db.peerVideos||[]).filter(x => x.id !== id);
+  saveData();
+  closeModal();
+  renderPeers();
+  toast('已删除');
+}
 function fmt(n) {
   if (!n || n === 0) return '0';
   if (n >= 100000000) return (n/100000000).toFixed(1) + '亿';
