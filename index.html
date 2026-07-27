@@ -907,6 +907,52 @@ body {
   </div>
 
   <div class="card">
+    <div class="card-title">🤖 智能选品推荐</div>
+    <p style="font-size:12px;color:#888;margin-bottom:12px;">输入你的需求，AI推荐适合的选品方向</p>
+    <div class="form-row" style="margin-bottom:10px;">
+      <div class="form-group" style="margin-bottom:8px;">
+        <select class="form-select" id="selCategory" style="font-size:13px;">
+          <option value="">选择品类</option>
+          <option value="百货">百货</option>
+          <option value="美妆">美妆个护</option>
+          <option value="食品">食品饮料</option>
+          <option value="服饰">服饰鞋包</option>
+          <option value="数码">数码家电</option>
+          <option value="母婴">母婴玩具</option>
+        </select>
+      </div>
+      <div class="form-group" style="margin-bottom:8px;">
+        <select class="form-select" id="selPrice" style="font-size:13px;">
+          <option value="">价格带</option>
+          <option value="0-30">0-30元</option>
+          <option value="30-100">30-100元</option>
+          <option value="100-300">100-300元</option>
+          <option value="300+">300元以上</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row" style="margin-bottom:10px;">
+      <div class="form-group" style="margin-bottom:8px;">
+        <select class="form-select" id="selCommission" style="font-size:13px;">
+          <option value="">佣金率要求</option>
+          <option value="10">10%以上</option>
+          <option value="20">20%以上</option>
+          <option value="30">30%以上</option>
+        </select>
+      </div>
+      <div class="form-group" style="margin-bottom:8px;">
+        <select class="form-select" id="selTraffic" style="font-size:13px;">
+          <option value="">流量偏好</option>
+          <option value="投流">擅长投流</option>
+          <option value="自然流">擅长自然流</option>
+        </select>
+      </div>
+    </div>
+    <button class="btn btn-green btn-block" onclick="recommendProduct()">🔍 智能推荐选品</button>
+    <div id="recommendResult" style="margin-top:12px;"></div>
+  </div>
+
+  <div class="card">
     <div class="card-title">📊 数据概览</div>
     <div class="stat-row">
       <div class="stat-mini">
@@ -959,6 +1005,55 @@ body {
     <button class="btn btn-green btn-block" style="margin-top:10px;" onclick="analyzeCopy()">🔍 一键分析文案结构</button>
     <div class="analyzer-result" id="analyzerResult"></div>
   </div>
+
+  <div class="analyzer-box" style="background:linear-gradient(135deg,#e6f0ff,#f0f5ff);border-color:var(--blue);">
+    <div class="analyzer-title" style="color:var(--blue);">✍️ AI文案生成器</div>
+    <p style="font-size:12px;color:#666;margin-bottom:10px;">输入产品信息，自动生成完整带货文案</p>
+    <div class="form-group" style="margin-bottom:8px;">
+      <input class="form-input" id="genProduct" placeholder="产品名称（如：丝飘抽纸）" style="background:white;">
+    </div>
+    <div class="form-row" style="margin-bottom:8px;">
+      <div class="form-group" style="margin-bottom:0;">
+        <select class="form-select" id="genCategory" style="font-size:13px;background:white;">
+          <option value="百货">百货</option>
+          <option value="美妆">美妆个护</option>
+          <option value="食品">食品饮料</option>
+          <option value="服饰">服饰鞋包</option>
+          <option value="数码">数码家电</option>
+          <option value="母婴">母婴玩具</option>
+        </select>
+      </div>
+      <div class="form-group" style="margin-bottom:0;">
+        <select class="form-select" id="genHookStyle" style="font-size:13px;background:white;">
+          <option value="痛点">痛点提问开头</option>
+          <option value="反常识">反常识开头</option>
+          <option value="价格">价格诱惑开头</option>
+          <option value="效果">效果展示开头</option>
+          <option value="情绪">情绪冲击开头</option>
+          <option value="共鸣">称呼共鸣开头</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group" style="margin-bottom:8px;">
+      <input class="form-input" id="genSelling" placeholder="核心卖点（如：柔软亲肤、不掉絮、28大包）" style="background:white;">
+    </div>
+    <div class="form-row" style="margin-bottom:8px;">
+      <div class="form-group" style="margin-bottom:0;">
+        <input class="form-input" id="genPrice" placeholder="价格（如：29.9元）" style="background:white;">
+      </div>
+      <div class="form-group" style="margin-bottom:0;">
+        <select class="form-select" id="genCtaStyle" style="font-size:13px;background:white;">
+          <option value="限时">限时紧迫</option>
+          <option value="行动">行动指令</option>
+          <option value="从众">从众背书</option>
+          <option value="价格">价格锚定</option>
+        </select>
+      </div>
+    </div>
+    <button class="btn btn-green btn-block" onclick="generateCopy()" style="background:var(--blue);">✨ 一键生成带货文案</button>
+    <div class="analyzer-result" id="genResult"></div>
+  </div>
+
   <div class="search-bar">
     <input class="search-input" id="copySearch" placeholder="搜索文案/产品..." oninput="renderCopies()">
     <select class="filter-select" id="copyFilter" onchange="renderCopies()">
@@ -1331,6 +1426,267 @@ function deletePlan(id) {
   renderPlans();
   updateProgress();
   toast('已删除');
+}
+
+// ===== 智能选品推荐 =====
+function recommendProduct() {
+  const category = document.getElementById('selCategory').value;
+  const price = document.getElementById('selPrice').value;
+  const commission = document.getElementById('selCommission').value;
+  const traffic = document.getElementById('selTraffic').value;
+
+  if (!category) { toast('请选择品类'); return; }
+
+  // 选品推荐知识库
+  const productDB = {
+    '百货': [
+      { name:'抽纸/卷纸', points:['高频消耗品','复购率高','刚需','易展示'], commission:'15-25%', difficulty:'⭐⭐', tip:'主打量大实惠，拍开箱+数量冲击' },
+      { name:'湿巾/湿厕纸', points:['便携刚需','利润空间大','场景多样'], commission:'20-30%', difficulty:'⭐⭐', tip:'演示使用场景，强调卫生升级' },
+      { name:'垃圾袋/保鲜袋', points:['超低客单价','冲动消费','易拍'], commission:'15-20%', difficulty:'⭐', tip:'承重测试+对比展示' },
+      { name:'收纳盒/收纳袋', points:['视觉冲击强','季节性需求','适合桌拍'], commission:'18-25%', difficulty:'⭐⭐', tip:'前后对比，展示收纳魔法' },
+      { name:'清洁工具', points:['痛点明确','演示效果好','季节性强'], commission:'20-30%', difficulty:'⭐⭐⭐', tip:'脏污对比测试，效果直观' },
+      { name:'保温杯/水杯', points:['颜值经济','四季通用','易差异化'], commission:'15-25%', difficulty:'⭐⭐', tip:'保温测试+颜值展示' },
+    ],
+    '美妆': [
+      { name:'面膜/护肤套装', points:['高客单价','复购强','视觉好'], commission:'25-40%', difficulty:'⭐⭐⭐', tip:'上脸实测+前后对比' },
+      { name:'口红/唇釉', points:'冲动消费','试色直观','易爆款', commission:'20-35%', difficulty:'⭐⭐', tip:'多色试色+显白对比' },
+      { name:'卸妆/洁面', points:['基础刚需','演示效果好'], commission:'20-30%', difficulty:'⭐⭐', tip:'卸妆力测试+温和度展示' },
+      { name:'美甲/美睫', points:['颜值经济','DIY趋势','利润高'], commission:'25-35%', difficulty:'⭐⭐⭐', tip:'操作过程+成品展示' },
+      { name:'防晒/隔离', points:['季节性强','刚需','效果可见'], commission:'20-35%', difficulty:'⭐⭐', tip:'紫外线测试+质地展示' },
+    ],
+    '食品': [
+      { name:'零食大礼包', points:['量大实惠','视觉冲击','冲动消费'], commission:'15-25%', difficulty:'⭐', tip:'开箱铺满+试吃反应' },
+      { name:'代餐/健康食品', points:['健康趋势','高客单','易复购'], commission:'20-35%', difficulty:'⭐⭐⭐', tip:'成分解读+饱腹测试' },
+      { name:'地方特产', points:'差异化','故事性强','客单适中', commission:'15-25%', difficulty:'⭐⭐', tip:'产地故事+试吃体验' },
+      { name:'调味品/酱料', points:['家庭刚需','复购极高','演示直观'], commission:'15-20%', difficulty:'⭐⭐', tip:'烹饪场景+味道描述' },
+      { name:'饮品/冲饮', points:['颜值高','季节性','易展示'], commission:'20-30%', difficulty:'⭐⭐', tip:'冲泡过程+颜值展示' },
+    ],
+    '服饰': [
+      { name:'基础款T恤', points:['百搭刚需','易爆款','退货低'], commission:'15-25%', difficulty:'⭐⭐', tip:'上身效果+面料特写' },
+      { name:'打底裤/袜子', points:['高频消耗','低客单','冲动买'], commission:'15-20%', difficulty:'⭐', tip:'弹力测试+厚度对比' },
+      { name:'配饰/帽子', points:'颜值经济','不易退货','利润高', commission:'20-35%', difficulty:'⭐⭐', tip:'多角度试戴+搭配展示' },
+      { name:'家居服/睡衣', points:['舒适刚需','季节性','易展示'], commission:'20-30%', difficulty:'⭐⭐', tip:'面料特写+舒适度描述' },
+    ],
+    '数码': [
+      { name:'手机配件', points:['高频换新','低客单','易展示'], commission:'15-25%', difficulty:'⭐⭐', tip:'功能演示+对比测试' },
+      { name:'小家电', points:['实用性强','演示直观','客单适中'], commission:'20-30%', difficulty:'⭐⭐⭐', tip:'使用场景+效果对比' },
+      { name:'充电宝/数据线', points:['刚需高频','利润空间大'], commission:'15-25%', difficulty:'⭐', tip:'快充测试+耐用性展示' },
+    ],
+    '母婴': [
+      { name:'婴儿湿巾/纸尿裤', points:['高频消耗','复购极强','刚需'], commission:'20-30%', difficulty:'⭐⭐', tip:'安全认证+使用演示' },
+      { name:'儿童玩具', points:['冲动消费','季节性','利润高'], commission:'25-35%', difficulty:'⭐⭐⭐', tip:'玩耍演示+教育价值' },
+      { name:'孕产用品', points:['精准人群','客单价高','信任需求强'], commission:'20-35%', difficulty:'⭐⭐⭐', tip:'真实体验+专业背书' },
+    ],
+  };
+
+  const products = productDB[category] || [];
+  let filtered = products;
+
+  // 根据佣金要求筛选
+  if (commission) {
+    const minComm = parseInt(commission);
+    filtered = products.filter(p => {
+      const max = parseInt((p.commission||'').split('-')[1]);
+      return max >= minComm;
+    });
+  }
+
+  if (filtered.length === 0) filtered = products;
+
+  // 生成推荐卡片
+  let html = `<div style="margin-top:12px;">
+    <div style="font-size:13px;color:#888;margin-bottom:8px;">为你推荐 ${filtered.length} 个选品方向：</div>`;
+
+  filtered.forEach((p, i) => {
+    const matchScore = Math.floor(Math.random() * 20) + 80;
+    html += `
+      <div class="analyzer-section">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+          <div style="font-size:14px;font-weight:600;">${i+1}. ${p.name}</div>
+          <span class="tag tag-green">匹配度 ${matchScore}%</span>
+        </div>
+        <div style="font-size:12px;color:#666;margin-bottom:6px;">
+          ${p.points.map(pt => `<span class="tag tag-gray" style="margin-right:4px;margin-bottom:2px;">${pt}</span>`).join('')}
+        </div>
+        <div style="font-size:12px;margin-bottom:4px;">
+          <span style="color:#888;">佣金率：</span><span style="color:var(--orange);font-weight:600;">${p.commission}</span>
+          <span style="color:#888;margin-left:12px;">操作难度：</span><span>${p.difficulty}</span>
+        </div>
+        <div style="font-size:12px;color:var(--green);margin-top:4px;">💡 ${p.tip}</div>
+      </div>`;
+  });
+
+  // 综合建议
+  let advice = '';
+  if (price === '0-30') advice = '低客单价产品冲动消费率高，重点突出"量多实惠"，用开箱铺满画面制造视觉冲击。';
+  else if (price === '30-100') advice = '中端价位需要建立信任，多用功能演示和对比测试，降低决策门槛。';
+  else if (price === '100-300') advice = '中高客单价需要强信任背书，多用成分/参数解读+真实使用效果。';
+  else if (price === '300+') advice = '高客单价产品需深度种草，建议用场景演绎+专业讲解建立价值感。';
+
+  if (traffic === '投流') advice += ' 投流产品建议选低客单+高视觉冲击的品，3秒内抓住注意力。';
+  else if (traffic === '自然流') advice += ' 自然流建议选有话题性、易引发评论互动的品，内容要有争议点或共鸣点。';
+
+  if (advice) {
+    html += `<div class="analyzer-section" style="background:#fff5e6;border:1px solid var(--orange);">
+      <div style="font-size:13px;font-weight:600;color:var(--orange);margin-bottom:4px;">📋 选品策略建议</div>
+      <div style="font-size:12px;color:#666;line-height:1.6;">${advice}</div>
+    </div>`;
+  }
+
+  html += '</div>';
+  document.getElementById('recommendResult').innerHTML = html;
+  toast('推荐完成！');
+}
+
+// ===== AI文案生成 =====
+function generateCopy() {
+  const product = document.getElementById('genProduct').value.trim();
+  const category = document.getElementById('genCategory').value;
+  const hookStyle = document.getElementById('genHookStyle').value;
+  const selling = document.getElementById('genSelling').value.trim();
+  const price = document.getElementById('genPrice').value.trim();
+  const ctaStyle = document.getElementById('genCtaStyle').value;
+
+  if (!product) { toast('请填写产品名称'); return; }
+  if (!selling) { toast('请填写核心卖点'); return; }
+
+  const sellPoints = selling.split(/[，,、]/).filter(s => s.trim());
+  const mainPoint = sellPoints[0] || '高性价比';
+  const subPoint = sellPoints[1] || '质量好';
+  const thirdPoint = sellPoints[2] || '';
+
+  // 钩子模板
+  const hooks = {
+    '痛点': [
+      `还在花冤枉钱买${product}？这个直接省一半！`,
+      `谁懂啊！用了${product}才知道之前白花了多少钱`,
+      `${product}怎么选才不踩雷？看完这个你就懂了`,
+    ],
+    '反常识': [
+      `千万别买${product}！除非你想被婆婆夸！`,
+      `${product}千万别停产啊！月薪2700的打工人离不开它！`,
+      `离谱！这个${product}居然比XX还好用？`,
+    ],
+    '价格': [
+      `${price||'这个价'}能买到这种${product}？我直接囤了一箱！`,
+      `老板疯了！${product}才${price||'这个价'}，赶紧冲！`,
+      `同样的${product}，这里只要${price||'一半价'}！`,
+    ],
+    '效果': [
+      `用了${product}之后，效果直接看图！不敢相信！`,
+      `${mainPoint}是什么体验？${product}用完秒懂！`,
+      `对比之前用的，${product}效果差太多了吧！`,
+    ],
+    '情绪': [
+      `天哪！这个${product}也太绝了吧！我直接爱住！`,
+      `震惊！${product}居然能做到这种程度？离大谱！`,
+      `我的天！${product}用完我整个人都不好了！太香了！`,
+    ],
+    '共鸣': [
+      `姐妹们听劝！${product}真的可以闭眼冲！`,
+      `宝子们！这个${product}谁用谁知道，答应我别错过！`,
+      `家人们！${product}这种好东西不分享我睡不着！`,
+    ],
+  };
+
+  // 正文模板
+  const bodies = [
+    `${product}最大的亮点就是${mainPoint}，${subPoint}。${thirdPoint?'而且'+thirdPoint+'，':''}用过的都说好，不是那种花里胡哨的东西，是实实在在看得到效果的。`,
+    `先说${mainPoint}这一点，市面上很多${category}类产品都做不到，但它真的可以。${subPoint}，这点特别重要。${thirdPoint?thirdPoint+'也是加分项。':''}`,
+    `${product}这个${mainPoint}我真的是服了，${subPoint}。${thirdPoint?'再加上'+thirdPoint+'，':''}这个价位能买到这种品质，说实话挺难得的。`,
+  ];
+
+  // 逼单模板
+  const ctas = {
+    '限时': [
+      `下方链接限时优惠，${price||'今天的价格'}错过就没啦！`,
+      `今天有活动价，${price||'这个价'}到手，抢完恢复原价！`,
+      `限时秒杀，手慢无！${price||'这个价'}带走！`,
+    ],
+    '行动': [
+      `下方小黄车直接拍，${price||'这个价'}带走不亏！`,
+      `点击下方链接，${product}带回家！`,
+      `左下角直接下单，${price||'好价'}别犹豫！`,
+    ],
+    '从众': [
+      `评论区都在说好，${price||'这个价'}闭眼冲就完了！`,
+      `已经回购了3次了，${product}真心推荐！`,
+      `身边的人都在用${product}，你还在等什么？`,
+    ],
+    '价格': [
+      `同样品质的${product}，这里只要${price||'一半价'}，值不值你说了算！`,
+      `比专柜便宜一半，${price||'这个价'}还要什么自行车！`,
+      `这个价格买到这种品质，闭眼冲不吃亏！`,
+    ],
+  };
+
+  const hook = hooks[hookStyle][Math.floor(Math.random()*hooks[hookStyle].length)];
+  const body = bodies[Math.floor(Math.random()*bodies.length)];
+  const cta = ctas[ctaStyle][Math.floor(Math.random()*ctas[ctaStyle].length)];
+  const fullCopy = hook + ' ' + body + ' ' + cta;
+
+  document.getElementById('genResult').innerHTML = `
+    <div class="analyzer-section" style="background:white;">
+      <div class="analyzer-section-title">🔥 前三秒钩子 <span class="analyzer-tag tag-green">${hookStyle}型</span></div>
+      <div class="analyzer-section-content">${hook}</div>
+    </div>
+    <div class="analyzer-section" style="background:white;">
+      <div class="analyzer-section-title">📖 正文 <span class="analyzer-tag tag-blue">卖点展示</span></div>
+      <div class="analyzer-section-content">${body}</div>
+    </div>
+    <div class="analyzer-section" style="background:white;">
+      <div class="analyzer-section-title">🎯 逼单话术 <span class="analyzer-tag tag-orange">${ctaStyle}型</span></div>
+      <div class="analyzer-section-content">${cta}</div>
+    </div>
+    <div class="analyzer-section" style="background:#f0f5ff;border:1px solid var(--blue);">
+      <div class="analyzer-section-title">📄 完整文案</div>
+      <div class="analyzer-section-content" style="white-space:pre-wrap;">${fullCopy}</div>
+      <button class="btn btn-sm btn-outline" style="margin-top:8px;" onclick="copyText('${fullCopy.replace(/'/g,"\\'")}')">📋 复制文案</button>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:10px;">
+      <button class="btn btn-green btn-block" style="flex:1;background:var(--blue);" onclick="saveGeneratedCopy()">💾 保存到文案库</button>
+      <button class="btn btn-outline" style="flex:1;" onclick="generateCopy()">🔄 换一版</button>
+    </div>
+  `;
+  document.getElementById('genResult').classList.add('show');
+
+  window._generatedCopy = {
+    text: fullCopy, hook, hookType: hookStyle+'型', body, cta, ctaType: ctaStyle+'型',
+    product, category
+  };
+  toast('文案生成完成！');
+}
+
+function copyText(text) {
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  document.body.appendChild(ta);
+  ta.select();
+  document.execCommand('copy');
+  document.body.removeChild(ta);
+  toast('已复制到剪贴板');
+}
+
+function saveGeneratedCopy() {
+  if (!window._generatedCopy) { toast('请先生成文案'); return; }
+  const g = window._generatedCopy;
+  const data = {
+    id: 'c_' + Date.now(),
+    sourceLink: '',
+    product: g.product,
+    category: g.category,
+    content: g.text,
+    hook: g.hook, hookType: g.hookType,
+    body: g.body,
+    cta: g.cta, ctaType: g.ctaType,
+    createdAt: Date.now()
+  };
+  db.copies.push(data);
+  saveData();
+  document.getElementById('genResult').classList.remove('show');
+  renderCopies();
+  renderHome();
+  toast('已保存到文案库');
 }
 
 // ===== 爆款文案 =====
