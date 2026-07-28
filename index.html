@@ -1005,8 +1005,8 @@ body {
       <input class="form-input" id="douyinLink" placeholder="粘贴抖音视频分享链接..." style="background:white;">
     </div>
     <div style="display:flex;gap:8px;">
-      <button class="btn btn-block" style="flex:1;background:var(--orange);color:white;" onclick="extractCopy()">📤 提取文案</button>
-      <button class="btn btn-outline" style="flex:1;" onclick="pasteFromClipboard()">📋 粘贴</button>
+      <button class="btn btn-block" style="flex:1;background:var(--orange);color:white;" onclick="extractCopy()">📋 复制链接</button>
+      <button class="btn btn-outline" style="flex:1;" onclick="pasteFromClipboard()">📥 粘贴文案</button>
     </div>
     <div id="extractGuide" style="margin-top:10px;display:none;" class="analyzer-section">
       <div style="font-size:13px;font-weight:600;color:var(--orange);margin-bottom:6px;">📱 提取步骤</div>
@@ -1719,10 +1719,7 @@ function extractCopy() {
   const link = document.getElementById('douyinLink').value.trim();
   if (!link) { toast('请先粘贴抖音视频链接'); return; }
 
-  // 显示提取步骤指引
-  document.getElementById('extractGuide').style.display = 'block';
-
-  // 保存链接到剪贴板，方便在提词匠里粘贴
+  // 复制链接到剪贴板
   const ta = document.createElement('textarea');
   ta.value = link;
   document.body.appendChild(ta);
@@ -1730,25 +1727,31 @@ function extractCopy() {
   try { document.execCommand('copy'); } catch(e) {}
   document.body.removeChild(ta);
 
-  // 新窗口打开提词匠网页版
-  window.open('https://www.douyin.com/', '_blank');
+  // 显示提取步骤
+  document.getElementById('extractGuide').style.display = 'block';
 
-  toast('链接已复制，正在跳转提词匠...');
+  // 滚动到分析器
+  document.getElementById('analyzerInput').scrollIntoView({behavior:'smooth'});
+
+  toast('链接已复制！按下方指引操作');
 }
 
 // 从剪贴板粘贴
 async function pasteFromClipboard() {
   try {
     const text = await navigator.clipboard.readText();
-    if (text) {
+    if (text && text.length > 10) {
       document.getElementById('analyzerInput').value = text;
-      toast('已粘贴，可点击分析');
+      document.getElementById('analyzerInput').scrollIntoView({behavior:'smooth'});
+      toast('已粘贴！点下方「一键分析」');
+    } else if (text) {
+      document.getElementById('analyzerInput').value = text;
+      toast('已粘贴，但内容较短');
     } else {
-      toast('剪贴板为空，请先复制文案');
+      toast('剪贴板为空，请先去提词匠复制文案');
     }
   } catch(e) {
-    // iOS Safari 可能不支持 clipboard API，提示手动粘贴
-    toast('请长按下方文本框手动粘贴');
+    toast('请长按下方文本框 → 粘贴');
     document.getElementById('analyzerInput').focus();
   }
 }
