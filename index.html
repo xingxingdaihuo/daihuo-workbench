@@ -998,24 +998,29 @@ body {
 
 <!-- ===== 爆款文案页 ===== -->
 <div class="page" id="page-copy">
+  <!-- 🔗 一键提取抖音文案（全新升级） -->
   <div class="analyzer-box" style="background:linear-gradient(135deg,#fff5e6,#fffaf0);border-color:var(--orange);">
-    <div class="analyzer-title" style="color:var(--orange);">🔗 抖音链接提取文案</div>
-    <p style="font-size:12px;color:#666;margin-bottom:10px;">粘贴抖音视频链接，一键跳转提取文案，再回来分析</p>
+    <div class="analyzer-title" style="color:var(--orange);">🔗 一键提取抖音文案 <span style="font-size:11px;color:#999;font-weight:400;">粘贴链接 → 自动提取 → 自动分析 → 一键改编</span></div>
     <div class="form-group" style="margin-bottom:8px;">
-      <input class="form-input" id="douyinLink" placeholder="粘贴抖音视频分享链接..." style="background:white;">
+      <input class="form-input" id="douyinLink" placeholder="粘贴抖音视频分享链接（如：https://v.douyin.com/xxxxx）" style="background:white;">
     </div>
     <div style="display:flex;gap:8px;">
-      <button class="btn btn-block" style="flex:1;background:var(--orange);color:white;" onclick="extractCopy()">📋 复制链接</button>
+      <button class="btn btn-block" style="flex:1;background:var(--orange);color:white;" onclick="oneClickExtract()" id="btnExtract">
+        🚀 一键提取+分析
+      </button>
       <button class="btn btn-outline" style="flex:1;" onclick="pasteFromClipboard()">📥 粘贴文案</button>
     </div>
+    <div id="extractStatus" style="margin-top:8px;display:none;font-size:12px;color:#666;text-align:center;"></div>
     <div id="extractGuide" style="margin-top:10px;display:none;" class="analyzer-section">
-      <div style="font-size:13px;font-weight:600;color:var(--orange);margin-bottom:6px;">📱 提取步骤</div>
-      <div style="font-size:12px;color:#666;line-height:1.8;">
-        1. 点击上方「提取文案」跳转到提词匠<br>
-        2. 粘贴抖音链接 → 点「开始提取」<br>
-        3. 提取完成后 → 点「全文一键复制」<br>
-        4. 回到工作台 → 点下方「粘贴」按钮<br>
-        5. 点「一键分析文案结构」
+      <div style="font-size:13px;font-weight:600;color:var(--orange);margin-bottom:6px;">📱 自动提取失败，请手动操作</div>
+      <div style="margin-bottom:8px;">
+        <button class="btn btn-sm btn-outline" onclick="openCopilotFrame()" style="width:100%;">🔗 打开 Copilot.cc 提取工具</button>
+      </div>
+      <div id="copilotFrame" style="display:none;margin-top:8px;">
+        <iframe id="copilotIframe" src="" style="width:100%;height:300px;border:1px solid #ddd;border-radius:10px;" allow="clipboard-read;clipboard-write"></iframe>
+      </div>
+      <div style="font-size:12px;color:#666;line-height:1.8;margin-top:8px;">
+        💡 提示：在Copilot.cc中粘贴链接提取文案后，复制全文，然后回到这里点「📥 粘贴文案」
       </div>
     </div>
   </div>
@@ -1714,26 +1719,149 @@ function saveGeneratedCopy() {
 // ===== 爆款文案 =====
 
 // 文案智能分析器
-// 抖音链接提取文案
-function extractCopy() {
+// ===== 一键提取抖音文案（全新） =====
+async function oneClickExtract() {
   const link = document.getElementById('douyinLink').value.trim();
   if (!link) { toast('请先粘贴抖音视频链接'); return; }
 
-  // 复制链接到剪贴板
-  const ta = document.createElement('textarea');
-  ta.value = link;
-  document.body.appendChild(ta);
-  ta.select();
-  try { document.execCommand('copy'); } catch(e) {}
-  document.body.removeChild(ta);
+  // 检测是否是抖音链接
+  if (!/douyin\.com|iesdouyin|v\.douyin/.test(link)) {
+    toast('⚠️ 请输入抖音视频链接');
+    return;
+  }
 
-  // 显示提取步骤
-  document.getElementById('extractGuide').style.display = 'block';
+  const btn = document.getElementById('btnExtract');
+  const statusEl = document.getElementById('extractStatus');
+  btn.disabled = true;
+  btn.textContent = '⏳ 提取中...';
+  statusEl.style.display = 'block';
+  statusEl.textContent = '🔍 正在尝试自动提取文案...';
+  document.getElementById('extractGuide').style.display = 'none';
 
-  // 滚动到分析器
-  document.getElementById('analyzerInput').scrollIntoView({behavior:'smooth'});
+  let extractedText = null;
 
-  toast('链接已复制！按下方指引操作');
+  // 方案1: 尝试通过 Copilot.cc API 提取
+  try {
+    statusEl.textContent = '🔍 方法1: 尝试 Copilot.cc API...';
+    const resp = await fetchWithTimeout('https://copypilot.cc/api/extract', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url: link })
+    }, 15000);
+    if (resp && resp.ok) {
+      const data = await resp.json();
+      if (data && data.text) {
+        extractedText = data.text;
+        statusEl.textContent = '✅ Copilot.cc 提取成功！';
+      } else if (data && data.content) {
+        extractedText = data.content;
+        statusEl.textContent = '✅ Copilot.cc 提取成功！';
+      }
+    }
+  } catch(e) {
+    statusEl.textContent = '⚠️ 方法1失败，尝试方法2...';
+  }
+
+  // 方案2: 尝试 92k.fun API（可能已不可用，但试试）
+  if (!extractedText) {
+    try {
+      statusEl.textContent = '🔍 方法2: 尝试备用API...';
+      const resp = await fetchWithTimeout('http://api6.92k.fun/v1/api/transcribe/dzp_wa', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key: 'sk-123456', link: link })
+      }, 20000);
+      if (resp && resp.ok) {
+        const data = await resp.json();
+        if (data && data.description) {
+          extractedText = data.description;
+          statusEl.textContent = '✅ 备用API提取成功！';
+        }
+      }
+    } catch(e) {
+      statusEl.textContent = '⚠️ 方法2也失败了...';
+    }
+  }
+
+  // 方案3: 尝试通过代理方式（CORS代理+Copilot.cc）
+  if (!extractedText) {
+    try {
+      statusEl.textContent = '🔍 方法3: 尝试CORS代理...';
+      const proxyUrl = 'https://api.allorigins.win/raw?url=' + encodeURIComponent('https://copypilot.cc/api/extract');
+      const resp = await fetchWithTimeout(proxyUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: link })
+      }, 15000);
+      if (resp && resp.ok) {
+        const data = await resp.json();
+        if (data && (data.text || data.content)) {
+          extractedText = data.text || data.content;
+          statusEl.textContent = '✅ CORS代理提取成功！';
+        }
+      }
+    } catch(e) {}
+  }
+
+  btn.disabled = false;
+  btn.textContent = '🚀 一键提取+分析';
+
+  if (extractedText && extractedText.length > 10) {
+    // 提取成功！自动填入分析器并触发分析
+    statusEl.textContent = '✅ 文案提取成功！自动分析中...';
+    document.getElementById('analyzerInput').value = extractedText;
+    document.getElementById('extractGuide').style.display = 'none';
+
+    // 自动触发分析
+    setTimeout(() => {
+      analyzeCopy();
+      statusEl.textContent = '✅ 提取+分析完成！下方查看结果，可一键改编';
+      statusEl.style.color = 'var(--green)';
+      // 滚动到分析结果
+      document.getElementById('analyzerResult').scrollIntoView({behavior:'smooth'});
+    }, 300);
+  } else {
+    // 所有API都失败了，显示手动提取方案
+    statusEl.textContent = '⚠️ 自动提取暂不可用，请使用下方手动方式';
+    statusEl.style.color = 'var(--orange)';
+    document.getElementById('extractGuide').style.display = 'block';
+    document.getElementById('extractGuide').scrollIntoView({behavior:'smooth'});
+
+    // 预填Copilot.cc iframe
+    const iframe = document.getElementById('copilotIframe');
+    if (iframe && !iframe.src) {
+      iframe.src = 'https://copypilot.cc/';
+    }
+  }
+}
+
+// 带超时的fetch
+async function fetchWithTimeout(url, options, timeout = 10000) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeout);
+  try {
+    const resp = await fetch(url, { ...options, signal: controller.signal });
+    clearTimeout(timer);
+    return resp;
+  } catch(e) {
+    clearTimeout(timer);
+    throw e;
+  }
+}
+
+// 打开Copilot.cc内嵌窗口
+function openCopilotFrame() {
+  const frameDiv = document.getElementById('copilotFrame');
+  const iframe = document.getElementById('copilotIframe');
+  if (frameDiv.style.display === 'block') {
+    frameDiv.style.display = 'none';
+    return;
+  }
+  frameDiv.style.display = 'block';
+  if (!iframe.src) {
+    iframe.src = 'https://copypilot.cc/';
+  }
+  iframe.scrollIntoView({behavior:'smooth'});
 }
 
 // 从剪贴板粘贴
@@ -1844,7 +1972,7 @@ function analyzeCopy() {
     </div>
     <div style="display:flex;gap:8px;margin-top:10px;">
       <button class="btn btn-green btn-block" style="flex:1;" onclick="saveAnalyzedCopy()">💾 保存到文案库</button>
-      <button class="btn btn-outline" style="flex:1;" onclick="document.getElementById('analyzerResult').classList.remove('show')">清空</button>
+      <button class="btn btn-block" style="flex:1;background:var(--blue);color:white;" onclick="adaptAnalyzedCopy()">✏️ 一键改编文案</button>
     </div>
   `;
   document.getElementById('analyzerResult').classList.add('show');
@@ -1859,7 +1987,7 @@ function saveAnalyzedCopy() {
   const a = window._lastAnalysis;
   const data = {
     id: 'c_' + Date.now(),
-    sourceLink: '',
+    sourceLink: document.getElementById('douyinLink')?.value?.trim() || '',
     product: '待填写',
     category: '百货',
     content: a.text,
@@ -1877,6 +2005,118 @@ function saveAnalyzedCopy() {
   renderCopies();
   renderHome();
   toast('已保存到文案库，可编辑补充产品信息');
+}
+
+// 一键改编分析后的文案
+function adaptAnalyzedCopy() {
+  if (!window._lastAnalysis) { toast('请先分析文案'); return; }
+  const a = window._lastAnalysis;
+  openModal(`
+    <div class="modal-title">✏️ 一键改编文案</div>
+    <div style="font-size:12px;color:#888;margin-bottom:12px;">基于分析结果，填入你的产品信息自动改编</div>
+    <div class="form-group">
+      <label class="form-label">你的产品名称</label>
+      <input class="form-input" id="adaptProduct" placeholder="输入你的产品名">
+    </div>
+    <div class="form-group">
+      <label class="form-label">你的产品卖点（逗号分隔）</label>
+      <input class="form-input" id="adaptSelling" placeholder="如：大容量、便宜、不掉絮">
+    </div>
+    <div class="form-group">
+      <label class="form-label">你的价格</label>
+      <input class="form-input" id="adaptPrice" placeholder="如：29.9元">
+    </div>
+    <div style="font-size:12px;color:#888;margin-bottom:8px;">
+      原钩子类型：<span class="tag tag-green">${a.hookType}</span> 
+      原正文结构：<span class="tag tag-blue">${a.bodyType||'其他'}</span> 
+      原逼单类型：<span class="tag tag-orange">${a.ctaType}</span>
+    </div>
+    <button class="btn btn-green btn-block" onclick="generateAdaptFromAnalysis()">✨ 生成改编文案</button>
+    <div style="height:12px;"></div>
+    <div id="adaptFromAnalysisResult"></div>
+    <div style="height:20px;"></div>
+  `);
+}
+
+function generateAdaptFromAnalysis() {
+  if (!window._lastAnalysis) return;
+  const a = window._lastAnalysis;
+  const newProduct = document.getElementById('adaptProduct').value.trim() || '你的产品';
+  const selling = document.getElementById('adaptSelling').value.trim() || '高性价比';
+  const price = document.getElementById('adaptPrice').value.trim() || '超值价';
+  const sellPoints = selling.split(/[，,、]/).filter(s => s.trim());
+
+  // 改编：保留原结构，替换关键词
+  let newHook = a.hook;
+  let newBody = a.body;
+  let newCta = a.cta;
+
+  // 替换常见占位词
+  const replaceMap = {
+    '产品': newProduct, '这个': newProduct, '它': newProduct,
+    '这个价': price, 'XX元': price
+  };
+
+  // 智能替换卖点
+  if (sellPoints.length > 0) {
+    // 在正文中融入卖点
+    const sellStr = sellPoints.join('、');
+    newBody = newBody + '，' + sellStr + '，真的没话说！';
+  }
+
+  // 更新价格相关
+  if (price) {
+    newCta = newCta.replace(/[\d.]+元(\d+包)?/g, price).replace(/这个价/g, price);
+    if (!newCta.includes(price)) {
+      newCta = `下方链接，${price}就能带走，别犹豫！`;
+    }
+  }
+
+  // 替换产品名
+  newHook = newHook.replace(/这个.{1,6}(产品|东西|好物)/g, newProduct);
+
+  const fullText = newHook + ' ' + newBody + ' ' + newCta;
+
+  document.getElementById('adaptFromAnalysisResult').innerHTML = `
+    <div class="analyzer-section" style="background:#f0faf4;border:1px solid var(--green);">
+      <div class="analyzer-section-title">✅ 改编结果</div>
+      <div style="font-size:13px;margin-bottom:6px;"><b>🔥 钩子：</b>${newHook}</div>
+      <div style="font-size:13px;margin-bottom:6px;"><b>📖 正文：</b>${newBody}</div>
+      <div style="font-size:13px;margin-bottom:10px;"><b>🎯 逼单：</b>${newCta}</div>
+      <div style="font-size:12px;color:#888;margin-bottom:8px;">📄 完整文案：${fullText}</div>
+      <div style="display:flex;gap:6px;">
+        <button class="btn btn-sm btn-green" style="flex:1;" onclick="copyText('${fullText.replace(/'/g,"\\'").replace(/"/g,'&quot;')}')">📋 复制</button>
+        <button class="btn btn-sm btn-outline" style="flex:1;" onclick="saveAdaptedFromAnalysis('${newProduct.replace(/'/g,"\\'")}','${price.replace(/'/g,"\\'")}')">💾 保存</button>
+      </div>
+    </div>
+  `;
+
+  window._adaptedCopy = { text: fullText, hook: newHook, body: newBody, cta: newCta, product: newProduct, price };
+}
+
+function saveAdaptedFromAnalysis(product, price) {
+  if (!window._adaptedCopy) return;
+  const a = window._lastAnalysis;
+  const ac = window._adaptedCopy;
+  const data = {
+    id: 'c_' + Date.now(),
+    sourceLink: document.getElementById('douyinLink')?.value?.trim() || '',
+    product: product,
+    category: '百货',
+    content: ac.text,
+    hook: ac.hook,
+    hookType: a.hookType,
+    body: ac.body,
+    cta: ac.cta,
+    ctaType: a.ctaType,
+    createdAt: Date.now()
+  };
+  db.copies.push(data);
+  saveData();
+  closeModal();
+  renderCopies();
+  renderHome();
+  toast('改编文案已保存到文案库');
 }
 
 function renderCopies() {
