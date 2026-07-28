@@ -1760,6 +1760,14 @@ function analyzeCopy() {
   const text = document.getElementById('analyzerInput').value.trim();
   if (!text) { toast('请先粘贴文案内容'); return; }
 
+  // 检测是否是抖音分享链接/口令
+  if (/复制打开抖音|v\.douyin\.com|iesdouyin\.com|抖音口令/.test(text)) {
+    toast('❌ 这是抖音分享链接，不是文案！请先去提词匠提取文案');
+    document.getElementById('extractGuide').style.display = 'block';
+    document.getElementById('extractGuide').scrollIntoView({behavior:'smooth'});
+    return;
+  }
+
   // 按标点分句
   const sentences = text.split(/[。！？\n！？。]/).filter(s => s.trim().length > 2);
   if (sentences.length === 0) { toast('文案内容太少'); return; }
