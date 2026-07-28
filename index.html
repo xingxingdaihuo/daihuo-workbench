@@ -998,6 +998,28 @@ body {
 
 <!-- ===== 爆款文案页 ===== -->
 <div class="page" id="page-copy">
+  <div class="analyzer-box" style="background:linear-gradient(135deg,#fff5e6,#fffaf0);border-color:var(--orange);">
+    <div class="analyzer-title" style="color:var(--orange);">🔗 抖音链接提取文案</div>
+    <p style="font-size:12px;color:#666;margin-bottom:10px;">粘贴抖音视频链接，一键跳转提取文案，再回来分析</p>
+    <div class="form-group" style="margin-bottom:8px;">
+      <input class="form-input" id="douyinLink" placeholder="粘贴抖音视频分享链接..." style="background:white;">
+    </div>
+    <div style="display:flex;gap:8px;">
+      <button class="btn btn-block" style="flex:1;background:var(--orange);color:white;" onclick="extractCopy()">📤 提取文案</button>
+      <button class="btn btn-outline" style="flex:1;" onclick="pasteFromClipboard()">📋 粘贴</button>
+    </div>
+    <div id="extractGuide" style="margin-top:10px;display:none;" class="analyzer-section">
+      <div style="font-size:13px;font-weight:600;color:var(--orange);margin-bottom:6px;">📱 提取步骤</div>
+      <div style="font-size:12px;color:#666;line-height:1.8;">
+        1. 点击上方「提取文案」跳转到提词匠<br>
+        2. 粘贴抖音链接 → 点「开始提取」<br>
+        3. 提取完成后 → 点「全文一键复制」<br>
+        4. 回到工作台 → 点下方「粘贴」按钮<br>
+        5. 点「一键分析文案结构」
+      </div>
+    </div>
+  </div>
+
   <div class="analyzer-box">
     <div class="analyzer-title">🤖 文案智能分析器</div>
     <p style="font-size:12px;color:#666;margin-bottom:10px;">粘贴爆款文案，自动拆解前三秒钩子、正文结构、逼单话术</p>
@@ -1692,6 +1714,45 @@ function saveGeneratedCopy() {
 // ===== 爆款文案 =====
 
 // 文案智能分析器
+// 抖音链接提取文案
+function extractCopy() {
+  const link = document.getElementById('douyinLink').value.trim();
+  if (!link) { toast('请先粘贴抖音视频链接'); return; }
+
+  // 显示提取步骤指引
+  document.getElementById('extractGuide').style.display = 'block';
+
+  // 保存链接到剪贴板，方便在提词匠里粘贴
+  const ta = document.createElement('textarea');
+  ta.value = link;
+  document.body.appendChild(ta);
+  ta.select();
+  try { document.execCommand('copy'); } catch(e) {}
+  document.body.removeChild(ta);
+
+  // 新窗口打开提词匠网页版
+  window.open('https://www.douyin.com/', '_blank');
+
+  toast('链接已复制，正在跳转提词匠...');
+}
+
+// 从剪贴板粘贴
+async function pasteFromClipboard() {
+  try {
+    const text = await navigator.clipboard.readText();
+    if (text) {
+      document.getElementById('analyzerInput').value = text;
+      toast('已粘贴，可点击分析');
+    } else {
+      toast('剪贴板为空，请先复制文案');
+    }
+  } catch(e) {
+    // iOS Safari 可能不支持 clipboard API，提示手动粘贴
+    toast('请长按下方文本框手动粘贴');
+    document.getElementById('analyzerInput').focus();
+  }
+}
+
 function analyzeCopy() {
   const text = document.getElementById('analyzerInput').value.trim();
   if (!text) { toast('请先粘贴文案内容'); return; }
