@@ -237,6 +237,71 @@ body {
   background: #fff5e6;
 }
 
+/* ===== 周日历条 ===== */
+.cal-day {
+  flex: 1;
+  text-align: center;
+  padding: 6px 2px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  position: relative;
+}
+.cal-day .cal-week { font-size: 10px; color: var(--text-light); }
+.cal-day .cal-date { font-size: 14px; font-weight: 600; margin-top: 1px; }
+.cal-day .cal-dot {
+  position: absolute;
+  bottom: 3px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--green);
+}
+.cal-day.today { background: var(--green-light); }
+.cal-day.today .cal-date { color: var(--green); }
+.cal-day.selected { background: var(--green); }
+.cal-day.selected .cal-week,
+.cal-day.selected .cal-date { color: white; }
+.cal-day.selected .cal-dot { background: white; }
+.cal-day.has-plans .cal-date { color: var(--green); }
+
+/* ===== 月度热力图 ===== */
+.heat-cell {
+  aspect-ratio: 1;
+  border-radius: 4px;
+  background: #f0f0f0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;
+  color: #ccc;
+  cursor: pointer;
+  transition: transform 0.15s;
+}
+.heat-cell:hover { transform: scale(1.15); }
+.heat-cell.lvl1 { background: #a8e6c1; color: #4a8c66; }
+.heat-cell.lvl2 { background: #07c160; color: white; }
+.heat-cell.lvl3 { background: #06ad56; color: white; }
+.heat-cell.today { box-shadow: 0 0 0 2px var(--orange); }
+.heat-cell.empty { background: transparent; cursor: default; }
+
+/* ===== 历史记录条目 ===== */
+.history-day {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+}
+.history-day:last-child { border-bottom: none; }
+.history-date { font-size: 13px; font-weight: 600; }
+.history-date .history-weekday { font-size: 11px; color: var(--text-dim); font-weight: 400; margin-left: 4px; }
+.history-stats { font-size: 12px; color: var(--text-dim); }
+.history-stats b { color: var(--green); }
+
 .plan-info {
   flex: 1;
   min-width: 0;
@@ -985,14 +1050,74 @@ body {
   </div>
 </div>
 
-<!-- ===== 拍摄计划页 ===== -->
+<!-- ===== 拍摄计划页（升级：历史数据统计） ===== -->
 <div class="page" id="page-plan">
+  <!-- 📊 统计概览卡片 -->
+  <div style="display:flex;gap:8px;margin-bottom:12px;">
+    <div class="card" style="flex:1;padding:12px;text-align:center;">
+      <div style="font-size:11px;color:var(--text-dim);">今日完成</div>
+      <div style="font-size:22px;font-weight:700;color:var(--green);margin-top:2px;" id="statTodayDone">0/0</div>
+      <div style="font-size:10px;color:#bbb;margin-top:2px;" id="statTodayRate">0%</div>
+    </div>
+    <div class="card" style="flex:1;padding:12px;text-align:center;">
+      <div style="font-size:11px;color:var(--text-dim);">本月完成</div>
+      <div style="font-size:22px;font-weight:700;color:var(--blue);margin-top:2px;" id="statMonthDone">0</div>
+      <div style="font-size:10px;color:#bbb;margin-top:2px;" id="statMonthRate">条拍摄</div>
+    </div>
+    <div class="card" style="flex:1;padding:12px;text-align:center;">
+      <div style="font-size:11px;color:var(--text-dim);">连续天数</div>
+      <div style="font-size:22px;font-weight:700;color:var(--orange);margin-top:2px;" id="statStreak">0</div>
+      <div style="font-size:10px;color:#bbb;margin-top:2px;">天连拍</div>
+    </div>
+  </div>
+
+  <!-- 📅 日期选择条 -->
+  <div class="card" style="padding:10px 12px;margin-bottom:12px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+      <span style="font-size:14px;font-weight:600;" id="planDateTitle">📋 今日拍摄计划</span>
+      <div style="display:flex;gap:4px;">
+        <button class="btn btn-sm btn-outline" onclick="changePlanDate(-1)" style="padding:4px 10px;">‹</button>
+        <button class="btn btn-sm btn-outline" onclick="jumpToToday()" style="padding:4px 8px;font-size:12px;">今天</button>
+        <button class="btn btn-sm btn-outline" onclick="changePlanDate(1)" style="padding:4px 10px;">›</button>
+      </div>
+    </div>
+    <!-- 周日历条 -->
+    <div id="weekCalendar" style="display:flex;gap:4px;justify-content:space-between;"></div>
+  </div>
+
+  <!-- 📋 当日计划列表 -->
   <div class="card">
     <div class="card-title">
-      📋 今日拍摄计划
+      <span id="planListTitle">📋 今日计划</span>
       <span class="more" onclick="openPlanModal()">+ 添加</span>
     </div>
     <div id="planList"></div>
+  </div>
+
+  <!-- 📈 月度统计 -->
+  <div class="card" style="margin-top:12px;">
+    <div class="card-title">
+      📈 月度统计
+      <span style="font-size:12px;color:#888;font-weight:400;" id="planMonthLabel"></span>
+    </div>
+    <!-- 月度热力图 -->
+    <div id="monthHeatmap" style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-top:8px;"></div>
+    <div style="display:flex;align-items:center;justify-content:flex-end;gap:4px;margin-top:8px;font-size:10px;color:#bbb;">
+      <span>少</span>
+      <div style="width:12px;height:12px;border-radius:3px;background:#f0f0f0;"></div>
+      <div style="width:12px;height:12px;border-radius:3px;background:#a8e6c1;"></div>
+      <div style="width:12px;height:12px;border-radius:3px;background:#07c160;"></div>
+      <div style="width:12px;height:12px;border-radius:3px;background:#06ad56;"></div>
+      <span>多</span>
+    </div>
+    <!-- 月度数据汇总 -->
+    <div id="monthSummary" style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border);"></div>
+  </div>
+
+  <!-- 📜 历史记录列表 -->
+  <div class="card" style="margin-top:12px;">
+    <div class="card-title">📜 历史记录</div>
+    <div id="planHistory" style="max-height:300px;overflow-y:auto;"></div>
   </div>
 </div>
 
@@ -1209,6 +1334,11 @@ function today() {
   const d = new Date();
   return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
 }
+function getOffsetDate(offset) {
+  const d = new Date();
+  d.setDate(d.getDate() + offset);
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
 function todayCN() {
   const d = new Date();
   const week = ['日','一','二','三','四','五','六'];
@@ -1350,29 +1480,279 @@ function renderHome() {
   ` : '<div class="empty"><div class="empty-icon">📈</div><p>暂无数据</p></div>';
 }
 
-// ===== 拍摄计划 =====
+// ===== 拍摄计划（升级版：带历史数据） =====
+let planCurrentDate = today(); // 当前查看的日期，默认今天
+
 function renderPlans() {
+  // 渲染统计概览
+  renderPlanStats();
+  // 渲染周日历条
+  renderWeekCalendar();
+  // 渲染当日计划列表
+  renderDayPlans();
+  // 渲染月度统计
+  renderMonthStats();
+  // 渲染历史记录
+  renderPlanHistory();
+}
+
+// 统计概览
+function renderPlanStats() {
+  // 今日
   const todayPlans = db.plans.filter(p => p.date === today());
+  const todayDone = todayPlans.filter(p => p.status === 'done').length;
+  const todayTotal = todayPlans.length;
+  const todayRate = todayTotal > 0 ? Math.round(todayDone / todayTotal * 100) : 0;
+  document.getElementById('statTodayDone').textContent = todayDone + '/' + todayTotal;
+  document.getElementById('statTodayRate').textContent = '完成率 ' + todayRate + '%';
+
+  // 本月
+  const now = new Date();
+  const ym = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
+  const monthPlans = db.plans.filter(p => p.date && p.date.startsWith(ym));
+  const monthDone = monthPlans.filter(p => p.status === 'done').reduce((s, p) => s + (p.count || 1), 0);
+  document.getElementById('statMonthDone').textContent = monthDone;
+  const monthTotal = monthPlans.reduce((s, p) => s + (p.count || 1), 0);
+  document.getElementById('statMonthRate').textContent = '共' + monthTotal + '条计划';
+
+  // 连续天数
+  const streak = calcPlanStreak();
+  document.getElementById('statStreak').textContent = streak;
+}
+
+// 计算连续拍摄天数
+function calcPlanStreak() {
+  const doneDates = [...new Set(db.plans.filter(p => p.status === 'done').map(p => p.date))].sort().reverse();
+  if (doneDates.length === 0) return 0;
+  let streak = 0;
+  let checkDate = today();
+  for (let i = 0; i < 365; i++) {
+    if (doneDates.includes(checkDate)) {
+      streak++;
+      // 往前推一天
+      const d = new Date(checkDate);
+      d.setDate(d.getDate() - 1);
+      checkDate = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+    } else {
+      // 如果是今天且今天没完成，不算断
+      if (i === 0) continue;
+      break;
+    }
+  }
+  return streak;
+}
+
+// 周日历条
+function renderWeekCalendar() {
+  const container = document.getElementById('weekCalendar');
+  const weekdays = ['日', '一', '二', '三', '四', '五', '六'];
+  const current = new Date(planCurrentDate);
+  // 找到本周周日
+  const weekStart = new Date(current);
+  weekStart.setDate(current.getDate() - current.getDay());
+
+  let html = '';
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(weekStart);
+    d.setDate(weekStart.getDate() + i);
+    const dateStr = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+    const isToday = dateStr === today();
+    const isSelected = dateStr === planCurrentDate;
+    const hasPlans = db.plans.some(p => p.date === dateStr);
+    const hasDone = db.plans.some(p => p.date === dateStr && p.status === 'done');
+
+    html += `<div class="cal-day ${isToday ? 'today' : ''} ${isSelected ? 'selected' : ''} ${hasPlans ? 'has-plans' : ''}" onclick="selectPlanDate('${dateStr}')">
+      <div class="cal-week">${weekdays[i]}</div>
+      <div class="cal-date">${d.getDate()}</div>
+      ${hasDone ? '<div class="cal-dot"></div>' : ''}
+    </div>`;
+  }
+  container.innerHTML = html;
+}
+
+// 切换日期
+function changePlanDate(delta) {
+  const d = new Date(planCurrentDate);
+  d.setDate(d.getDate() + delta);
+  planCurrentDate = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  renderPlans();
+}
+
+function jumpToToday() {
+  planCurrentDate = today();
+  renderPlans();
+}
+
+function selectPlanDate(dateStr) {
+  planCurrentDate = dateStr;
+  renderPlans();
+}
+
+// 当日计划列表
+function renderDayPlans() {
+  const dayPlans = db.plans.filter(p => p.date === planCurrentDate);
   const container = document.getElementById('planList');
-  if (todayPlans.length === 0) {
-    container.innerHTML = '<div class="empty"><div class="empty-icon">📋</div><p>今日还没有拍摄计划</p><p style="font-size:12px;color:#bbb">点右上角"+ 添加"开始</p></div>';
+  const titleEl = document.getElementById('planListTitle');
+
+  const isToday = planCurrentDate === today();
+  const dateLabel = formatDateLabel(planCurrentDate);
+  titleEl.textContent = '📋 ' + dateLabel + '计划' + (isToday ? '' : '');
+
+  if (dayPlans.length === 0) {
+    container.innerHTML = '<div class="empty"><div class="empty-icon">📋</div><p>' + (isToday ? '今日还没有拍摄计划' : dateLabel + '没有计划') + '</p><p style="font-size:12px;color:#bbb">点右上角"+ 添加"开始</p></div>';
     return;
   }
-  container.innerHTML = todayPlans.map(p => `
-    <div class="plan-item ${p.status==='done'?'completed':''}">
-      <div class="plan-check ${p.status==='done'?'done':p.status==='doing'?'shooting':''}"
-           onclick="togglePlanStatus('${p.id}')">
-        ${p.status==='done'?'✓':p.status==='doing'?'':''}
+
+  const done = dayPlans.filter(p => p.status === 'done').length;
+  container.innerHTML = `
+    <div style="font-size:12px;color:#888;margin-bottom:8px;">完成 ${done}/${dayPlans.length} 条 · 共 ${dayPlans.reduce((s,p)=>s+(p.count||1),0)} 条视频</div>
+    ${dayPlans.map(p => `
+      <div class="plan-item ${p.status==='done'?'completed':''}">
+        <div class="plan-check ${p.status==='done'?'done':p.status==='doing'?'shooting':''}"
+             onclick="togglePlanStatus('${p.id}')">
+          ${p.status==='done'?'✓':p.status==='doing'?'🔵':''}
+        </div>
+        <div class="plan-info">
+          <div class="plan-name">${p.product}</div>
+          <div class="plan-meta">计划拍 ${p.count} 条 ${p.note?'· '+p.note:''}</div>
+        </div>
+        <span class="plan-status ${p.status==='done'?'status-done':p.status==='doing'?'status-doing':'status-todo'}">
+          ${p.status==='done'?'已拍':p.status==='doing'?'拍摄中':'未拍'}
+        </span>
       </div>
-      <div class="plan-info">
-        <div class="plan-name">${p.product}</div>
-        <div class="plan-meta">计划拍 ${p.count} 条 ${p.note?'· '+p.note:''}</div>
-      </div>
-      <span class="plan-status ${p.status==='done'?'status-done':p.status==='doing'?'status-doing':'status-todo'}">
-        ${p.status==='done'?'已拍':p.status==='doing'?'拍摄中':'未拍'}
-      </span>
+    `).join('')}
+  `;
+}
+
+// 格式化日期标签
+function formatDateLabel(dateStr) {
+  if (dateStr === today()) return '今日';
+  const d = new Date(dateStr);
+  const t = new Date();
+  t.setDate(t.getDate() - 1);
+  const yesterday = t.getFullYear() + '-' + String(t.getMonth() + 1).padStart(2, '0') + '-' + String(t.getDate()).padStart(2, '0');
+  if (dateStr === yesterday) return '昨日';
+  const weekdays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
+  return `${d.getMonth()+1}月${d.getDate()}日 ${weekdays[d.getDay()]}`;
+}
+
+// 月度统计（热力图 + 汇总）
+function renderMonthStats() {
+  const current = new Date(planCurrentDate);
+  const year = current.getFullYear();
+  const month = current.getMonth();
+  const ym = year + '-' + String(month + 1).padStart(2, '0');
+
+  document.getElementById('planMonthLabel').textContent = year + '年' + (month + 1) + '月';
+
+  // 热力图
+  const heatmap = document.getElementById('monthHeatmap');
+  const firstDay = new Date(year, month, 1);
+  const lastDay = new Date(year, month + 1, 0);
+  const startWeekday = firstDay.getDay();
+  const daysInMonth = lastDay.getDate();
+
+  let html = '';
+  // 前置空白
+  for (let i = 0; i < startWeekday; i++) {
+    html += '<div class="heat-cell empty"></div>';
+  }
+  // 每日
+  for (let day = 1; day <= daysInMonth; day++) {
+    const dateStr = ym + '-' + String(day).padStart(2, '0');
+    const dayPlans = db.plans.filter(p => p.date === dateStr);
+    const doneCount = dayPlans.filter(p => p.status === 'done').reduce((s, p) => s + (p.count || 1), 0);
+    const totalCount = dayPlans.reduce((s, p) => s + (p.count || 1), 0);
+
+    let level = '';
+    if (doneCount > 0 && doneCount <= 2) level = 'lvl1';
+    else if (doneCount >= 3 && doneCount <= 5) level = 'lvl2';
+    else if (doneCount >= 6) level = 'lvl3';
+
+    const isToday = dateStr === today();
+    html += `<div class="heat-cell ${level} ${isToday ? 'today' : ''}" 
+      onclick="selectPlanDate('${dateStr}')" 
+      title="${dateStr}：完成${doneCount}/${totalCount}条">${day}</div>`;
+  }
+  heatmap.innerHTML = html;
+
+  // 月度汇总
+  const monthPlans = db.plans.filter(p => p.date && p.date.startsWith(ym));
+  const totalPlanned = monthPlans.reduce((s, p) => s + (p.count || 1), 0);
+  const totalDone = monthPlans.filter(p => p.status === 'done').reduce((s, p) => s + (p.count || 1), 0);
+  const doneDays = new Set(monthPlans.filter(p => p.status === 'done').map(p => p.date)).size;
+  const monthRate = totalPlanned > 0 ? Math.round(totalDone / totalPlanned * 100) : 0;
+
+  // 产品分布
+  const productStats = {};
+  monthPlans.filter(p => p.status === 'done').forEach(p => {
+    if (!productStats[p.product]) productStats[p.product] = 0;
+    productStats[p.product] += (p.count || 1);
+  });
+  const topProducts = Object.entries(productStats).sort((a, b) => b[1] - a[1]).slice(0, 3);
+
+  document.getElementById('monthSummary').innerHTML = `
+    <div style="display:flex;gap:16px;font-size:12px;">
+      <div>📅 计划拍摄：<b style="color:var(--text);">${totalPlanned}</b> 条</div>
+      <div>✅ 已完成：<b style="color:var(--green);">${totalDone}</b> 条</div>
+      <div>📊 完成率：<b style="color:var(--orange);">${monthRate}%</b></div>
     </div>
-  `).join('');
+    <div style="margin-top:6px;font-size:12px;color:#888;">🔥 本月有 <b style="color:var(--green);">${doneDays}</b> 天完成拍摄</div>
+    ${topProducts.length > 0 ? `
+      <div style="margin-top:8px;font-size:12px;">
+        <div style="color:#888;margin-bottom:4px;">🏆 本月拍摄最多的产品：</div>
+        ${topProducts.map((p, i) => `
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;">
+            <span style="font-size:14px;">${['🥇','🥈','🥉'][i]}</span>
+            <span style="font-size:13px;">${p[0]}</span>
+            <span class="tag tag-green" style="font-size:11px;">${p[1]}条</span>
+          </div>
+        `).join('')}
+      </div>
+    ` : ''}
+  `;
+}
+
+// 历史记录列表
+function renderPlanHistory() {
+  const container = document.getElementById('planHistory');
+  // 按日期分组，倒序
+  const dateMap = {};
+  db.plans.forEach(p => {
+    if (!dateMap[p.date]) dateMap[p.date] = [];
+    dateMap[p.date].push(p);
+  });
+  const dates = Object.keys(dateMap).sort().reverse().slice(0, 30); // 最近30天
+
+  if (dates.length === 0) {
+    container.innerHTML = '<div class="empty" style="padding:20px;"><div class="empty-icon">📜</div><p>暂无历史记录</p></div>';
+    return;
+  }
+
+  const weekdays = ['日', '一', '二', '三', '四', '五', '六'];
+  container.innerHTML = dates.map(dateStr => {
+    const plans = dateMap[dateStr];
+    const done = plans.filter(p => p.status === 'done').length;
+    const total = plans.length;
+    const videoCount = plans.reduce((s, p) => s + (p.count || 1), 0);
+    const d = new Date(dateStr);
+    const isToday = dateStr === today();
+
+    return `<div class="history-day" onclick="selectPlanDate('${dateStr}')">
+      <div>
+        <div class="history-date">
+          ${isToday ? '📍 今日' : `${d.getMonth()+1}/${d.getDate()}`}
+          <span class="history-weekday">周${weekdays[d.getDay()]}</span>
+        </div>
+        <div style="font-size:11px;color:#bbb;margin-top:2px;">
+          ${plans.map(p => p.product).slice(0, 3).join('、')}${plans.length > 3 ? '...' : ''}
+        </div>
+      </div>
+      <div class="history-stats">
+        <b>${done}</b>/${total} 完成 · ${videoCount}条视频
+      </div>
+    </div>`;
+  }).join('');
 }
 
 function togglePlanStatus(id) {
@@ -1391,6 +1771,7 @@ function openPlanModal(id) {
   const p = id ? db.plans.find(x=>x.id===id) : null;
   openModal(`
     <div class="modal-title">${id?'编辑计划':'添加拍摄计划'}</div>
+    <div style="font-size:12px;color:#888;margin-bottom:10px;">📅 日期：${formatDateLabel(planCurrentDate)}</div>
     <div class="form-group">
       <label class="form-label">产品名称</label>
       <input class="form-input" id="planProduct" placeholder="如：丝飘抽纸" value="${p?p.product:''}">
@@ -1408,6 +1789,10 @@ function openPlanModal(id) {
           <option value="done" ${p&&p.status==='done'?'selected':''}>已拍</option>
         </select>
       </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">拍摄日期</label>
+      <input class="form-input" id="planDate" type="date" value="${p?p.date:planCurrentDate}">
     </div>
     <div class="form-group">
       <label class="form-label">备注</label>
@@ -1428,8 +1813,8 @@ function savePlan(id) {
     product,
     count: parseInt(document.getElementById('planCount').value) || 1,
     status: document.getElementById('planStatus').value,
+    date: document.getElementById('planDate').value || planCurrentDate,
     note: document.getElementById('planNote').value.trim(),
-    date: today()
   };
   if (id) {
     const idx = db.plans.findIndex(x => x.id === id);
@@ -2832,6 +3217,18 @@ function initSampleData() {
       { id:'p_s1', product:'丝飘抽纸', count:3, status:'done', note:'真人口播+桌拍', date: today() },
       { id:'p_s2', product:'德佑湿厕纸', count:2, status:'doing', note:'随手拍', date: today() },
       { id:'p_s3', product:'收纳盒', count:1, status:'todo', note:'桌拍', date: today() },
+      // 历史示例数据
+      { id:'p_h1', product:'丝飘抽纸', count:3, status:'done', note:'口播', date: getOffsetDate(-1) },
+      { id:'p_h2', product:'鸡胸肉肠', count:2, status:'done', note:'随手拍', date: getOffsetDate(-1) },
+      { id:'p_h3', product:'德佑湿厕纸', count:2, status:'done', note:'桌拍', date: getOffsetDate(-2) },
+      { id:'p_h4', product:'收纳盒', count:1, status:'done', note:'桌拍', date: getOffsetDate(-3) },
+      { id:'p_h5', product:'丝飘抽纸', count:4, status:'done', note:'真人口播', date: getOffsetDate(-4) },
+      { id:'p_h6', product:'鸡胸肉肠', count:2, status:'done', note:'试吃', date: getOffsetDate(-5) },
+      { id:'p_h7', product:'湿巾', count:3, status:'done', note:'桌拍', date: getOffsetDate(-7) },
+      { id:'p_h8', product:'丝飘抽纸', count:2, status:'done', note:'', date: getOffsetDate(-8) },
+      { id:'p_h9', product:'收纳盒', count:1, status:'done', note:'演示', date: getOffsetDate(-10) },
+      { id:'p_h10', product:'德佑湿厕纸', count:3, status:'done', note:'口播', date: getOffsetDate(-12) },
+      { id:'p_h11', product:'丝飘抽纸', count:2, status:'done', note:'', date: getOffsetDate(-15) },
     ];
     db.copies = [
       { id:'c_s1', sourceLink:'', product:'丝飘抽纸', category:'百货',
