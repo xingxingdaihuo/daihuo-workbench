@@ -721,6 +721,8 @@ body {
   cursor: pointer;
   transition: color 0.2s;
 }
+.tab-item .tab-icon { font-size: 20px; }
+.tab-item .tab-label { font-size: 10px; }
 
 .tab-item.active {
   color: var(--green);
@@ -968,6 +970,11 @@ body {
       <div class="quick-icon">👥</div>
       <h4>同行监控</h4>
       <p>账号追踪·每日汇总</p>
+    </div>
+    <div class="quick-card" onclick="switchTab('sample')">
+      <div class="quick-icon">📦</div>
+      <h4>样品申请</h4>
+      <p>申请记录·拍摄跟踪</p>
     </div>
   </div>
 
@@ -1278,6 +1285,55 @@ body {
   </div>
 </div>
 
+<!-- ===== 样品申请页 ===== -->
+<div class="page" id="page-sample">
+  <!-- 📊 样品统计概览 -->
+  <div style="display:flex;gap:8px;margin-bottom:12px;">
+    <div class="card" style="flex:1;padding:12px;text-align:center;">
+      <div style="font-size:11px;color:var(--text-dim);">总样品</div>
+      <div style="font-size:22px;font-weight:700;color:var(--text);margin-top:2px;" id="sampleStatTotal">0</div>
+    </div>
+    <div class="card" style="flex:1;padding:12px;text-align:center;">
+      <div style="font-size:11px;color:var(--text-dim);">已到货</div>
+      <div style="font-size:22px;font-weight:700;color:var(--blue);margin-top:2px;" id="sampleStatArrived">0</div>
+    </div>
+    <div class="card" style="flex:1;padding:12px;text-align:center;">
+      <div style="font-size:11px;color:var(--text-dim);">已拍</div>
+      <div style="font-size:22px;font-weight:700;color:var(--green);margin-top:2px;" id="sampleStatShot">0</div>
+    </div>
+    <div class="card" style="flex:1;padding:12px;text-align:center;">
+      <div style="font-size:11px;color:var(--text-dim);">待拍</div>
+      <div style="font-size:22px;font-weight:700;color:var(--orange);margin-top:2px;" id="sampleStatUnshot">0</div>
+    </div>
+  </div>
+
+  <!-- 🔍 筛选条 -->
+  <div class="search-bar">
+    <input class="search-input" id="sampleSearch" placeholder="搜索样品名称..." oninput="renderSamples()">
+    <select class="filter-select" id="sampleStatusFilter" onchange="renderSamples()">
+      <option value="">全部状态</option>
+      <option value="pending">待申请</option>
+      <option value="applied">已申请</option>
+      <option value="arrived">已到货</option>
+      <option value="returned">已退回</option>
+    </select>
+    <select class="filter-select" id="sampleShotFilter" onchange="renderSamples()">
+      <option value="">全部拍摄</option>
+      <option value="shot">已拍</option>
+      <option value="unshot">未拍</option>
+    </select>
+  </div>
+
+  <!-- 📋 样品列表 -->
+  <div class="card">
+    <div class="card-title">
+      📦 样品申请记录
+      <span class="more" onclick="openSampleModal()">+ 添加</span>
+    </div>
+    <div id="sampleList"></div>
+  </div>
+</div>
+
 <!-- FAB -->
 <button class="fab" onclick="fabAction()" id="fabBtn">+</button>
 
@@ -1298,9 +1354,12 @@ body {
     <div class="tab-item" onclick="switchTab('product')" data-tab="product">
       <div class="tab-icon">🛍️</div><div class="tab-label">产品</div>
     </div>
-    <div class="tab-item" onclick="switchTab('peer')" data-tab="peer">
-      <div class="tab-icon">👥</div><div class="tab-label">同行</div>
-    </div>
+  <div class="tab-item" onclick="switchTab('peer')" data-tab="peer">
+    <div class="tab-icon">👥</div><div class="tab-label">同行</div>
+  </div>
+  <div class="tab-item" onclick="switchTab('sample')" data-tab="sample">
+    <div class="tab-icon">📦</div><div class="tab-label">样品</div>
+  </div>
 </div>
 
 <!-- 模态框 -->
@@ -1322,7 +1381,7 @@ function loadData() {
     const raw = localStorage.getItem(DB_KEY);
     if (raw) return JSON.parse(raw);
   } catch(e) {}
-  return { plans:[], copies:[], videos:[], products:[], peerAccounts:[], peerVideos:[], streak:{days:0,lastDate:''} };
+  return { plans:[], copies:[], videos:[], products:[], peerAccounts:[], peerVideos:[], samples:[], streak:{days:0,lastDate:''} };
 }
 function saveData() {
   localStorage.setItem(DB_KEY, JSON.stringify(db));
@@ -1399,6 +1458,7 @@ function switchTab(tab) {
   if (tab === 'video') { renderVideos(); }
   if (tab === 'product') { renderProducts(); }
   if (tab === 'peer') { renderPeers(); }
+  if (tab === 'sample') { renderSamples(); }
 }
 
 // ===== Toast =====
@@ -1429,6 +1489,7 @@ function fabAction() {
   else if (activeTab === 'video') openVideoModal();
   else   if (activeTab === 'product') openProductModal();
   else if (activeTab === 'peer') openPeerAccountModal();
+  else if (activeTab === 'sample') openSampleModal();
   else openPlanModal();
 }
 
@@ -3202,6 +3263,211 @@ function deletePeerVideo(id) {
   renderPeers();
   toast('已删除');
 }
+
+// ===== 样品申请记录 =====
+function renderSamples() {
+  if (!db.samples) db.samples = [];
+
+  // 统计
+  const total = db.samples.length;
+  const arrived = db.samples.filter(s => s.status === 'arrived').length;
+  const shot = db.samples.filter(s => s.shot === true).length;
+  const unshot = db.samples.filter(s => s.shot !== true && s.status === 'arrived').length;
+  document.getElementById('sampleStatTotal').textContent = total;
+  document.getElementById('sampleStatArrived').textContent = arrived;
+  document.getElementById('sampleStatShot').textContent = shot;
+  document.getElementById('sampleStatUnshot').textContent = unshot;
+
+  // 筛选
+  const search = (document.getElementById('sampleSearch')?.value || '').toLowerCase();
+  const statusFilter = document.getElementById('sampleStatusFilter')?.value || '';
+  const shotFilter = document.getElementById('sampleShotFilter')?.value || '';
+
+  let list = db.samples.filter(s => {
+    const ms = !search || (s.name||'').toLowerCase().includes(search) || (s.note||'').toLowerCase().includes(search);
+    const mf = !statusFilter || s.status === statusFilter;
+    const sf = !shotFilter || (shotFilter === 'shot' ? s.shot === true : s.shot !== true);
+    return ms && mf && sf;
+  });
+
+  // 按申请日期倒序
+  list.sort((a, b) => (b.applyDate || '').localeCompare(a.applyDate || ''));
+
+  const container = document.getElementById('sampleList');
+  if (list.length === 0) {
+    container.innerHTML = '<div class="empty"><div class="empty-icon">📦</div><p>暂无样品记录</p><p style="font-size:12px;color:#bbb">点右上角"+ 添加"记录样品</p></div>';
+    return;
+  }
+
+  const statusMap = {
+    pending: { label: '待申请', color: 'tag-gray' },
+    applied: { label: '已申请', color: 'tag-blue' },
+    arrived: { label: '已到货', color: 'tag-green' },
+    returned: { label: '已退回', color: 'tag-red' },
+  };
+
+  container.innerHTML = list.map(s => {
+    const st = statusMap[s.status] || statusMap.pending;
+    return `
+    <div class="plan-item" style="align-items:flex-start;padding:14px 0;">
+      <div class="plan-check ${s.shot ? 'done' : ''}" 
+           onclick="toggleSampleShot('${s.id}')"
+           style="${s.status !== 'arrived' ? 'opacity:0.3;pointer-events:none;' : ''}"
+           title="${s.status !== 'arrived' ? '到货后才能标记拍摄' : (s.shot ? '已拍，点击取消' : '点击标记已拍')}">
+        ${s.shot ? '✓' : ''}
+      </div>
+      <div class="plan-info" style="flex:1;">
+        <div class="plan-name" style="${s.shot ? 'text-decoration:line-through;color:var(--text-dim);' : ''}">${s.name||'未命名'}</div>
+        <div class="plan-meta">
+          <span class="tag ${st.color}" style="font-size:11px;margin-right:4px;">${st.label}</span>
+          ${s.shot ? '<span class="tag tag-green" style="font-size:11px;">已拍</span>' : (s.status === 'arrived' ? '<span class="tag tag-orange" style="font-size:11px;">待拍</span>' : '')}
+        </div>
+        <div class="plan-meta" style="margin-top:3px;">
+          📅 ${s.applyDate || '未填'} ${s.arriveDate ? '→ 到货 ' + s.arriveDate : ''}
+          ${s.platform ? ' · 🏪 ' + s.platform : ''}
+        </div>
+        ${s.note ? `<div style="font-size:12px;color:#888;margin-top:3px;">📝 ${s.note}</div>` : ''}
+        ${s.shot && s.shotDate ? `<div style="font-size:11px;color:var(--green);margin-top:2px;">✅ 拍摄于 ${s.shotDate}</div>` : ''}
+      </div>
+      <div style="display:flex;flex-direction:column;gap:4px;">
+        <button class="btn btn-sm btn-outline" style="padding:2px 8px;font-size:11px;" onclick="openSampleModal('${s.id}')">编辑</button>
+        <button class="btn btn-sm btn-outline" style="padding:2px 8px;font-size:11px;color:var(--orange);border-color:var(--orange);" onclick="cycleSampleStatus('${s.id}')">${statusMap[s.status] ? '' : ''}⇄</button>
+      </div>
+    </div>
+    `;
+  }).join('');
+}
+
+// 快速切换申请状态
+function cycleSampleStatus(id) {
+  const s = db.samples.find(x => x.id === id);
+  if (!s) return;
+  const order = ['pending', 'applied', 'arrived', 'returned'];
+  const cur = order.indexOf(s.status);
+  s.status = order[(cur + 1) % order.length];
+  if (s.status === 'arrived' && !s.arriveDate) {
+    s.arriveDate = today();
+  }
+  if (s.status !== 'arrived') {
+    // 退回等状态清除到货日期
+    if (s.status === 'returned') s.arriveDate = '';
+  }
+  saveData();
+  renderSamples();
+  const labels = { pending: '待申请', applied: '已申请', arrived: '已到货', returned: '已退回' };
+  toast('状态：' + labels[s.status]);
+}
+
+// 切换拍摄状态
+function toggleSampleShot(id) {
+  const s = db.samples.find(x => x.id === id);
+  if (!s) return;
+  if (s.status !== 'arrived') {
+    toast('⚠️ 样品未到货，不能标记拍摄');
+    return;
+  }
+  s.shot = !s.shot;
+  if (s.shot) {
+    s.shotDate = today();
+  } else {
+    s.shotDate = '';
+  }
+  saveData();
+  renderSamples();
+  toast(s.shot ? '✅ 已标记为已拍' : '已取消拍摄标记');
+}
+
+// 添加/编辑样品弹窗
+function openSampleModal(id) {
+  const s = id ? db.samples.find(x => x.id === id) : null;
+  openModal(`
+    <div class="modal-title">${id ? '编辑样品' : '添加样品'}</div>
+    <div class="form-group">
+      <label class="form-label">样品名称</label>
+      <input class="form-input" id="sampleName" placeholder="如：丝飘抽纸、德佑湿厕纸" value="${s ? s.name || '' : ''}">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">申请状态</label>
+        <select class="form-select" id="sampleStatus">
+          <option value="pending" ${s && s.status === 'pending' ? 'selected' : ''}>待申请</option>
+          <option value="applied" ${s && s.status === 'applied' ? 'selected' : ''}>已申请</option>
+          <option value="arrived" ${s && s.status === 'arrived' ? 'selected' : ''}>已到货</option>
+          <option value="returned" ${s && s.status === 'returned' ? 'selected' : ''}>已退回</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">拍摄情况</label>
+        <select class="form-select" id="sampleShot">
+          <option value="false" ${!s || s.shot !== true ? 'selected' : ''}>未拍</option>
+          <option value="true" ${s && s.shot === true ? 'selected' : ''}>已拍</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">申请日期</label>
+        <input class="form-input" id="sampleApplyDate" type="date" value="${s ? s.applyDate || today() : today()}">
+      </div>
+      <div class="form-group">
+        <label class="form-label">到货日期</label>
+        <input class="form-input" id="sampleArriveDate" type="date" value="${s ? s.arriveDate || '' : ''}">
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">申请平台/渠道</label>
+      <input class="form-input" id="samplePlatform" placeholder="如：抖音精选联盟、快手小店" value="${s ? s.platform || '' : ''}">
+    </div>
+    <div class="form-group">
+      <label class="form-label">备注</label>
+      <input class="form-input" id="sampleNote" placeholder="如：联系了XX商家、快递单号1234" value="${s ? s.note || '' : ''}">
+    </div>
+    <div style="display:flex;gap:10px;margin-top:16px;">
+      ${id ? `<button class="btn btn-outline" style="flex:1;color:#ff3b30;border-color:#ff3b30" onclick="deleteSample('${id}')">删除</button>` : ''}
+      <button class="btn btn-green btn-block" style="flex:1" onclick="saveSample('${id || ''}')">保存</button>
+    </div>
+    <div style="height:20px;"></div>
+  `);
+}
+
+function saveSample(id) {
+  const name = document.getElementById('sampleName').value.trim();
+  if (!name) { toast('请填写样品名称'); return; }
+  const data = {
+    name,
+    status: document.getElementById('sampleStatus').value,
+    shot: document.getElementById('sampleShot').value === 'true',
+    applyDate: document.getElementById('sampleApplyDate').value,
+    arriveDate: document.getElementById('sampleArriveDate').value,
+    platform: document.getElementById('samplePlatform').value.trim(),
+    note: document.getElementById('sampleNote').value.trim(),
+  };
+  if (data.shot && !data.shotDate) data.shotDate = today();
+  if (!db.samples) db.samples = [];
+  if (id) {
+    const idx = db.samples.findIndex(x => x.id === id);
+    data.id = id;
+    data.shotDate = db.samples[idx].shotDate || (data.shot ? today() : '');
+    db.samples[idx] = { ...db.samples[idx], ...data };
+  } else {
+    data.id = 's_' + Date.now();
+    data.createdAt = Date.now();
+    if (data.shot) data.shotDate = today();
+    db.samples.push(data);
+  }
+  saveData();
+  closeModal();
+  renderSamples();
+  toast(id ? '已更新' : '已添加');
+}
+
+function deleteSample(id) {
+  db.samples = (db.samples || []).filter(x => x.id !== id);
+  saveData();
+  closeModal();
+  renderSamples();
+  toast('已删除');
+}
 function fmt(n) {
   if (!n || n === 0) return '0';
   if (n >= 100000000) return (n/100000000).toFixed(1) + '亿';
@@ -3250,6 +3516,15 @@ function initSampleData() {
       { id:'pr_s2', name:'德佑湿厕纸', category:'百货', traffic:'自然流', sales:8500, commission:15, note:'便携独立包装', createdAt: Date.now() },
       { id:'pr_s3', name:'鸡胸肉肠', category:'食品', traffic:'投流', sales:25000, commission:25, note:'低卡高蛋白', createdAt: Date.now() },
       { id:'pr_s4', name:'收纳盒', category:'百货', traffic:'自然流', sales:8500, commission:18, note:'大容量免安装', createdAt: Date.now() },
+    ];
+    db.samples = [
+      { id:'s_s1', name:'丝飘抽纸', status:'arrived', shot:true, applyDate:getOffsetDate(-5), arriveDate:getOffsetDate(-3), shotDate:getOffsetDate(-2), platform:'抖音精选联盟', note:'28大包箱装样品', createdAt: Date.now() },
+      { id:'s_s2', name:'德佑湿厕纸', status:'arrived', shot:false, applyDate:getOffsetDate(-4), arriveDate:getOffsetDate(-2), platform:'抖音精选联盟', note:'便携装', createdAt: Date.now() },
+      { id:'s_s3', name:'鸡胸肉肠', status:'arrived', shot:true, applyDate:getOffsetDate(-7), arriveDate:getOffsetDate(-5), shotDate:getOffsetDate(-4), platform:'快手小店', note:'低卡高蛋白', createdAt: Date.now() },
+      { id:'s_s4', name:'收纳盒', status:'applied', shot:false, applyDate:getOffsetDate(-2), arriveDate:'', platform:'抖音精选联盟', note:'大容量免安装', createdAt: Date.now() },
+      { id:'s_s5', name:'湿巾', status:'pending', shot:false, applyDate:'', arriveDate:'', platform:'', note:'待联系商家', createdAt: Date.now() },
+      { id:'s_s6', name:'垃圾袋', status:'arrived', shot:false, applyDate:getOffsetDate(-6), arriveDate:getOffsetDate(-4), platform:'抖音精选联盟', note:'加厚款', createdAt: Date.now() },
+      { id:'s_s7', name:'洗衣液', status:'returned', shot:false, applyDate:getOffsetDate(-10), arriveDate:getOffsetDate(-8), platform:'抖音精选联盟', note:'样品有破损已退回', createdAt: Date.now() },
     ];
     saveData();
   }
